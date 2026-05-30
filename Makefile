@@ -30,6 +30,8 @@ $(BUILD_DIR)/%: $(BUILD_DIR)/%.o
 
 clean:
 	rm -rf $(BUILD_DIR)
+	mkdir -p $(BUILD_DIR)
+	touch $(BUILD_DIR)/.gitkeep
 
 test: all
 	./tests/run_tests.sh
