@@ -1,0 +1,6 @@
+# Build products generated from NASM sources.
+/build/*
+!/build/.gitkeep
+
+# Temporary files created by simple shell tests.
+/tmp/
