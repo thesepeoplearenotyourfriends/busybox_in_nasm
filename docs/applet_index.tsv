@@ -1,0 +1,12 @@
+command	level	tags
+true	00	exit-syscall,return-codes,smoke-test
+false	00	exit-syscall,return-codes,smoke-test
+echo	00	stdout,stderr,argv,write-syscall,option-subset
+yes	00	stdout,argv,write-syscall,simple-loop,pipe-behavior
+pwd	00	cwd,getcwd-syscall,stdout
+cat	01	stdin,stdout,file-read,buffer-loop,open-read-write-close
+head	01	stdin,stdout,file-read,line-counting,buffer-loop
+wc	01	stdin,stdout,file-read,byte-line-word-counting
+tee	01	stdin,stdout,file-write,buffer-loop
+rev	01	stdin,stdout,string-scan,line-buffer
+basename	01	path,string-scan
