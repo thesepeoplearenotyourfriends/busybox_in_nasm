@@ -55,6 +55,20 @@ The project should pick new applets from the lowest unfinished level unless a co
   - `./build/yes assembly | sed -n '1,3{p;};3q'`
 - **Known limitations:** writes each argument separately and treats short writes as failure. A later stream utility can teach buffered output and retry loops.
 
+
+### `pwd`
+
+- **Difficulty level:** 00 — primer / smoke-test command.
+- **Tags:** `cwd`, `getcwd-syscall`, `stdout`.
+- **Implemented behavior:** with no operands, asks the kernel for the current working directory and prints it followed by a newline.
+- **Unsupported behavior:** logical `-L` behavior, explicit physical `-P` option handling, `--help`, `--version`, and extra operands.
+- **Syscalls used:** `getcwd(2)`, `write(2)`, and `exit(2)`.
+- **Manual tests:**
+  - `./build/pwd`
+  - `test "$(./build/pwd)" = "$(pwd -P)"`
+  - `./build/pwd --help; echo $?`
+- **Known limitations:** prints the kernel physical cwd rather than a shell-maintained logical `$PWD`; uses a fixed 4096-byte buffer and prints a short diagnostic instead of decoding every errno value.
+
 ## Next applets by difficulty
 
-The next target should be `pwd` because it is the lowest unfinished applet in the chosen diagnostic sequence. After that, move to `cat`, then continue with the first stream and file tools.
+The next target should be `cat` because `pwd` now completes the first Level 00 diagnostic batch. After that, continue with the first stream and file tools: `head`, `wc`, `tee`, and `rev`.

@@ -26,6 +26,7 @@ Educational clarity is more important than cleverness, size, or speed.
 | `false` | 00 | implemented | exits with status 1 |
 | `echo` | 00 | implemented | supports plain operands and `-n`; unsupported option handling is intentionally explicit |
 | `yes` | 00 | implemented | writes `y` repeatedly, or the provided operands joined by spaces |
+| `pwd` | 00 | implemented | prints the kernel current working directory with `getcwd(2)` |
 
 Difficulty and topic metadata are tracked in `docs/applet_index.tsv`; per-command teaching contracts are tracked in `docs/applets.md`. Source files stay flat under `src/` so commands remain easy to find by name.
 
@@ -48,8 +49,9 @@ Binaries are written to `build/`:
 ```text
 build/true
 build/false
-build/yes
 build/echo
+build/yes
+build/pwd
 ```
 
 ## Test
@@ -73,6 +75,8 @@ echo $?
 ./build/echo -n no-newline
 
 timeout 1 ./build/yes assembly
+
+./build/pwd
 ```
 
 ## Project philosophy

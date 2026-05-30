@@ -25,6 +25,7 @@ The `syscall` instruction clobbers `rcx` and `r11`. If a program needs values in
 | --- | ---: | --- |
 | `write(2)` | `1` | `rdi = fd`, `rsi = buffer`, `rdx = byte count` |
 | `exit(2)` | `60` | `rdi = process status` |
+| `getcwd(2)` | `79` | `rdi = buffer`, `rsi = byte count` |
 
 ## Return values and errors
 
@@ -52,4 +53,4 @@ rsp -> argc
 
 A utility that needs command-line arguments reads `argc` from `[rsp]` and `argv[0]` from `[rsp + 8]`, `argv[1]` from `[rsp + 16]`, and so on.
 
-The `echo` and `yes` implementations use this layout directly so argument handling stays visible.
+The `echo`, `yes`, and `pwd` implementations use this layout directly so argument handling stays visible.

@@ -43,7 +43,7 @@ assert_stdout() {
 
 # The applet index is intentionally small metadata, but it should stay present
 # for each binary built by this first-pass Makefile.
-for tool in true false echo yes; do
+for tool in true false echo yes pwd; do
     awk -F '\t' -v tool="$tool" 'NR > 1 && $1 == tool { found = 1 } END { exit found ? 0 : 1 }' "$ROOT_DIR/docs/applet_index.tsv" \
         || fail "docs/applet_index.tsv is missing $tool"
 done
@@ -82,5 +82,17 @@ expected_yes='assembly
 assembly
 assembly'
 [ "$yes_output" = "$expected_yes" ] || fail 'yes did not repeat the provided operand'
+
+assert_stdout "$(pwd -P)" "$BUILD_DIR/pwd"
+
+set +e
+pwd_stderr=$($BUILD_DIR/pwd --help 2>&1 >/tmp/asmutils-pwd-help.out)
+pwd_status=$?
+set -e
+[ "$pwd_status" -eq 1 ] || fail 'pwd --help should fail with status 1 in this teaching version'
+case "$pwd_stderr" in
+    *"unsupported option: --help"*) ;;
+    *) fail 'pwd --help did not explain the unsupported option' ;;
+esac
 
 printf 'All tests passed.\n'
