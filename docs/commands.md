@@ -1,8 +1,8 @@
-# Applet notes
+# Command notes
 
-This file records the teaching contract for each implemented applet. The source files stay flat under `src/`; difficulty and topic metadata live in documentation so a command remains easy to find by name.
+This file records the teaching contract for each implemented command. The source files stay flat under `src/`; difficulty and topic metadata live in documentation so a command remains easy to find by name.
 
-## Implemented applets
+## Implemented commands
 
 ### `true`
 
@@ -121,4 +121,4 @@ This file records the teaching contract for each implemented applet. The source 
 
 Implementation order is tracked in `docs/roadmap.md`.
 
-Do not treat this file as the scheduling source. This file documents applets that exist or have implementation notes. When choosing the next applet batch, consult `docs/roadmap.md` and `docs/applet_index.tsv`.
+Do not treat this file as the scheduling source. This file documents commands that exist or have implementation notes. When choosing the next command batch, consult `docs/roadmap.md` and `docs/command_index.tsv`.
