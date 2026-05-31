@@ -43,7 +43,7 @@ assert_stdout() {
 
 # The command index is intentionally small metadata, but it should stay present
 # for each binary built by this first-pass Makefile.
-for tool in true false echo yes pwd arch ascii clear uname env printenv sleep usleep; do
+for tool in true false echo yes pwd arch ascii clear uname env printenv sleep usleep hostname whoami tty ttysize; do
     awk -F '\t' -v tool="$tool" 'NR > 1 && $1 == tool { found = 1 } END { exit found ? 0 : 1 }' "$ROOT_DIR/docs/command_index.tsv" \
         || fail "docs/command_index.tsv is missing $tool"
 done
@@ -86,6 +86,8 @@ assembly'
 assert_stdout "$(pwd -P)" "$BUILD_DIR/pwd"
 
 assert_stdout "$(uname -m)" "$BUILD_DIR/arch"
+assert_stdout "$(uname -n)" "$BUILD_DIR/hostname"
+assert_stdout "$(id -un)" "$BUILD_DIR/whoami"
 assert_stdout "$(uname)" "$BUILD_DIR/uname"
 assert_stdout "$(uname -m)" "$BUILD_DIR/uname" -m
 
@@ -101,6 +103,24 @@ assert_status 1 env -i "$BUILD_DIR/printenv" ASMUTILS_TEST_VALUE
 
 assert_status 0 "$BUILD_DIR/sleep" 0
 assert_status 0 "$BUILD_DIR/usleep" 0
+
+set +e
+tty_not_tty_output=$("$BUILD_DIR/tty" </dev/null)
+tty_not_tty_status=$?
+set -e
+[ "$tty_not_tty_status" -eq 1 ] || fail 'tty should fail with status 1 without a terminal on stdin'
+[ "$tty_not_tty_output" = "not a tty" ] || fail 'tty did not report non-tty stdin'
+assert_status 1 "$BUILD_DIR/tty" -s </dev/null
+
+set +e
+ttysize_stderr=$("$BUILD_DIR/ttysize" </dev/null 2>&1 >/tmp/asmutils-ttysize.out)
+ttysize_status=$?
+set -e
+[ "$ttysize_status" -eq 1 ] || fail 'ttysize should fail with status 1 without a terminal on stdin'
+case "$ttysize_stderr" in
+    *"ioctl TIOCGWINSZ failed"*) ;;
+    *) fail 'ttysize did not explain the ioctl failure' ;;
+esac
 
 set +e
 sleep_stderr=$($BUILD_DIR/sleep nope 2>&1 >/tmp/asmutils-sleep-bad.out)
@@ -146,6 +166,36 @@ set -e
 case "$pwd_stderr" in
     *"unsupported option: --help"*) ;;
     *) fail 'pwd --help did not explain the unsupported option' ;;
+esac
+
+set +e
+hostname_stderr=$($BUILD_DIR/hostname --help 2>&1 >/tmp/asmutils-hostname-help.out)
+hostname_status=$?
+set -e
+[ "$hostname_status" -eq 1 ] || fail 'hostname --help should fail with status 1 in this teaching version'
+case "$hostname_stderr" in
+    *"unsupported option: --help"*) ;;
+    *) fail 'hostname --help did not explain the unsupported option' ;;
+esac
+
+set +e
+whoami_stderr=$($BUILD_DIR/whoami extra 2>&1 >/tmp/asmutils-whoami-extra.out)
+whoami_status=$?
+set -e
+[ "$whoami_status" -eq 1 ] || fail 'whoami with an operand should fail with status 1'
+case "$whoami_stderr" in
+    *"unexpected operand: extra"*) ;;
+    *) fail 'whoami did not explain the unexpected operand' ;;
+esac
+
+set +e
+tty_stderr=$($BUILD_DIR/tty --help 2>&1 >/tmp/asmutils-tty-help.out)
+tty_status=$?
+set -e
+[ "$tty_status" -eq 1 ] || fail 'tty --help should fail with status 1 in this teaching version'
+case "$tty_stderr" in
+    *"unsupported option: --help"*) ;;
+    *) fail 'tty --help did not explain the unsupported option' ;;
 esac
 
 set +e
