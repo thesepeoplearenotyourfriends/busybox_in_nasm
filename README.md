@@ -28,7 +28,7 @@ Educational clarity is more important than cleverness, size, or speed.
 | `yes` | 00 | implemented | writes `y` repeatedly, or the provided operands joined by spaces |
 | `pwd` | 00 | implemented | prints the kernel current working directory with `getcwd(2)` |
 
-Difficulty and topic metadata are tracked in `docs/applet_index.tsv`; per-command teaching contracts are tracked in `docs/applets.md`. Source files stay flat under `src/` so commands remain easy to find by name.
+Difficulty and topic metadata are tracked in `docs/command_index.tsv`; per-command teaching contracts are tracked in `docs/commands.md`. Source files stay flat under `src/` so commands remain easy to find by name.
 
 ## Requirements
 
@@ -87,4 +87,4 @@ timeout 1 ./build/yes assembly
 - Document missing behavior honestly.
 - Add compatibility gradually after the educational core is clear.
 
-See `docs/style_guide.md`, `docs/linux_syscall_abi.md`, `docs/roadmap.md`, `docs/applet_index.tsv`, and `docs/applets.md` for more details.
+See `docs/style_guide.md`, `docs/linux_syscall_abi.md`, `docs/roadmap.md`, `docs/command_index.tsv`, and `docs/commands.md` for more details.
