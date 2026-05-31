@@ -43,7 +43,7 @@ assert_stdout() {
 
 # The applet index is intentionally small metadata, but it should stay present
 # for each binary built by this first-pass Makefile.
-for tool in true false echo yes pwd; do
+for tool in true false echo yes pwd arch ascii clear uname; do
     awk -F '\t' -v tool="$tool" 'NR > 1 && $1 == tool { found = 1 } END { exit found ? 0 : 1 }' "$ROOT_DIR/docs/applet_index.tsv" \
         || fail "docs/applet_index.tsv is missing $tool"
 done
@@ -85,6 +85,26 @@ assembly'
 
 assert_stdout "$(pwd -P)" "$BUILD_DIR/pwd"
 
+assert_stdout "$(uname -m)" "$BUILD_DIR/arch"
+assert_stdout "$(uname)" "$BUILD_DIR/uname"
+assert_stdout "$(uname -m)" "$BUILD_DIR/uname" -m
+
+ascii_head=$($BUILD_DIR/ascii | sed -n '1,4p')
+expected_ascii_head='Dec Hex Chr
+  0 00  NUL
+  1 01  SOH
+  2 02  STX'
+[ "$ascii_head" = "$expected_ascii_head" ] || fail 'ascii table did not start with the expected rows'
+
+ascii_tail=$($BUILD_DIR/ascii | tail -n 1)
+[ "$ascii_tail" = '127 7F  DEL' ] || fail 'ascii table did not end with DEL'
+
+clear_file=/tmp/asmutils-clear.out
+expected_clear_file=/tmp/asmutils-clear.expected
+"$BUILD_DIR/clear" >"$clear_file"
+printf '\033[H\033[2J' >"$expected_clear_file"
+cmp -s "$clear_file" "$expected_clear_file" || fail 'clear did not write the expected escape sequence'
+
 set +e
 pwd_stderr=$($BUILD_DIR/pwd --help 2>&1 >/tmp/asmutils-pwd-help.out)
 pwd_status=$?
@@ -93,6 +113,16 @@ set -e
 case "$pwd_stderr" in
     *"unsupported option: --help"*) ;;
     *) fail 'pwd --help did not explain the unsupported option' ;;
+esac
+
+set +e
+uname_stderr=$($BUILD_DIR/uname -a 2>&1 >/tmp/asmutils-uname-a.out)
+uname_status=$?
+set -e
+[ "$uname_status" -eq 1 ] || fail 'uname -a should fail with status 1 in this teaching version'
+case "$uname_stderr" in
+    *"unsupported option: -a"*) ;;
+    *) fail 'uname -a did not explain the unsupported option' ;;
 esac
 
 printf 'All tests passed.\n'

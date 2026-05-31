@@ -4,6 +4,10 @@ false	00	exit-syscall,return-codes,smoke-test
 echo	00	stdout,stderr,argv,write-syscall,option-subset
 yes	00	stdout,argv,write-syscall,simple-loop,pipe-behavior
 pwd	00	cwd,getcwd-syscall,stdout
+arch	00	utsname,uname-syscall,stdout
+ascii	00	stdout,write-syscall,static-table
+clear	00	stdout,write-syscall,terminal-escape
+uname	00	utsname,uname-syscall,stdout,option-subset
 cat	01	stdin,stdout,file-read,buffer-loop,open-read-write-close
 head	01	stdin,stdout,file-read,line-counting,buffer-loop
 wc	01	stdin,stdout,file-read,byte-line-word-counting

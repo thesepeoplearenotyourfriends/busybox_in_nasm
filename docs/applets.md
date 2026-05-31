@@ -69,6 +69,56 @@ The project should pick new applets from the lowest unfinished level unless a co
   - `./build/pwd --help; echo $?`
 - **Known limitations:** prints the kernel physical cwd rather than a shell-maintained logical `$PWD`; uses a fixed 4096-byte buffer and prints a short diagnostic instead of decoding every errno value.
 
+
+### `arch`
+
+- **Difficulty level:** 00 — primer / smoke-test command.
+- **Tags:** `utsname`, `uname-syscall`, `stdout`.
+- **Implemented behavior:** asks the kernel for utsname data and prints the machine hardware name followed by a newline, matching the same field used by `uname -m`.
+- **Unsupported behavior:** `--help`, `--version`, and operands are not diagnosed yet; extra words are ignored in this small teaching version.
+- **Syscalls used:** `uname(2)`, `write(2)`, and `exit(2)`.
+- **Manual tests:**
+  - `./build/arch`
+  - `test "$(./build/arch)" = "$(uname -m)"`
+- **Known limitations:** depends on Linux x86_64 utsname field layout and prints only the machine field.
+
+### `ascii`
+
+- **Difficulty level:** 00 — primer / smoke-test command.
+- **Tags:** `stdout`, `write-syscall`, `static-table`.
+- **Implemented behavior:** prints a compact 7-bit ASCII reference table with decimal value, hexadecimal value, and character or control-code name.
+- **Unsupported behavior:** alternate formats, option parsing, locale-aware names, Unicode, `--help`, and `--version` are not implemented.
+- **Syscalls used:** `write(2)` and `exit(2)`.
+- **Manual tests:**
+  - `./build/ascii | sed -n '1,5p'`
+  - `./build/ascii | tail -n 1`
+- **Known limitations:** this is a static educational table rather than a configurable formatter.
+
+### `clear`
+
+- **Difficulty level:** 00 — primer / smoke-test command.
+- **Tags:** `stdout`, `write-syscall`, `terminal-escape`.
+- **Implemented behavior:** writes the standard ANSI/VT100 clear-screen sequence `ESC [ H ESC [ 2 J` to stdout.
+- **Unsupported behavior:** terminfo lookup, terminal-specific behavior, option parsing, `--help`, and `--version` are not implemented.
+- **Syscalls used:** `write(2)` and `exit(2)`.
+- **Manual tests:**
+  - `./build/clear`
+  - `./build/clear | od -An -tx1`
+- **Known limitations:** assumes an ANSI-compatible terminal instead of consulting `$TERM`.
+
+### `uname`
+
+- **Difficulty level:** 00 — primer / smoke-test command.
+- **Tags:** `utsname`, `uname-syscall`, `stdout`, `option-subset`.
+- **Implemented behavior:** with no operands, prints the kernel name; with exactly `-m`, prints the machine hardware name.
+- **Unsupported behavior:** `-a`, `-n`, `-r`, `-s`, `-v`, `-o`, long options, combined short options, and extra operands are rejected with a short diagnostic.
+- **Syscalls used:** `uname(2)`, `write(2)`, and `exit(2)`.
+- **Manual tests:**
+  - `test "$(./build/uname)" = "$(uname)"`
+  - `test "$(./build/uname -m)" = "$(uname -m)"`
+  - `./build/uname -a; echo $?`
+- **Known limitations:** reads only the `sysname` and `machine` fields from Linux utsname.
+
 ## Next applets by difficulty
 
-The next target should be `cat` because `pwd` now completes the first Level 00 diagnostic batch. After that, continue with the first stream and file tools: `head`, `wc`, `tee`, and `rev`.
+The next target should be `cat` because the current Level 00 diagnostic batch is now complete. After that, continue with the first stream and file tools: `head`, `wc`, `tee`, and `rev`.
