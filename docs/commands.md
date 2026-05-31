@@ -186,7 +186,7 @@ This file records the teaching contract for each implemented command. The source
 
 - **Difficulty level:** 00 — primer / smoke-test command.
 - **Tags:** `utsname`, `hostname-hash`, `stdout`, `hex-format`, `option-subset`.
-- **First-pass semantics:** with no operands, read the kernel `nodename` with `uname(2)`, compute a simple documented 32-bit FNV-1a hash of that name, and print eight lowercase hexadecimal digits.
+- **Implemented behavior:** with no operands, reads the kernel `nodename` with `uname(2)`, computes a simple documented 32-bit FNV-1a hash of that name, and prints eight lowercase hexadecimal digits; these are first-pass semantics chosen for a readable no-libc lesson.
 - **Unsupported behavior:** options, operands, libc `gethostid(3)`, `/etc/hostid`, DNS address lookups, and vendor-specific host ID policy are not implemented.
 - **Syscalls used:** `uname(2)`, `write(2)`, and `exit(2)`.
 - **Manual tests:**
@@ -198,7 +198,7 @@ This file records the teaching contract for each implemented command. The source
 
 - **Difficulty level:** 00 — primer / smoke-test command.
 - **Tags:** `envp`, `login-name-policy`, `stdout`, `option-subset`.
-- **First-pass semantics:** with no operands, print the value of the `LOGNAME` environment variable when it is present and non-empty.
+- **Implemented behavior:** with no operands, prints the value of the `LOGNAME` environment variable when it is present and non-empty; this first-pass semantic keeps login-name lookup focused on envp scanning.
 - **Unsupported behavior:** options, operands, utmp/session lookup, controlling-terminal lookup, PAM/loginuid handling, and libc `getlogin(3)` are not implemented.
 - **Syscalls used:** `write(2)` and `exit(2)`.
 - **Manual tests:**
@@ -211,7 +211,7 @@ This file records the teaching contract for each implemented command. The source
 
 - **Difficulty level:** 00 — primer / smoke-test command.
 - **Tags:** `sched-affinity`, `cpu-count`, `bit-count`, `stdout`, `decimal-format`, `option-subset`.
-- **First-pass semantics:** with no operands, call `sched_getaffinity(2)` for the current process, count set bits in a fixed-size CPU mask, and print that count as decimal.
+- **Implemented behavior:** with no operands, calls `sched_getaffinity(2)` for the current process, counts set bits in a fixed-size CPU mask, and prints that count as decimal; this first-pass semantic teaches affinity bitsets before broader CPU policy.
 - **Unsupported behavior:** options such as `--all`, `--ignore=N`, environment variables, libc `sysconf(3)`, CPU hotplug races, masks larger than the teaching buffer, and cgroup quota interpretation are not implemented.
 - **Syscalls used:** `sched_getaffinity(2)`, `write(2)`, and `exit(2)`.
 - **Manual tests:**

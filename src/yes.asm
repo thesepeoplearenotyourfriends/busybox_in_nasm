@@ -76,9 +76,9 @@ _start:
     jmp .yes_forever
 
 .exit_failure:
-    mov rax, 60             ; exit(2)
-    mov rdi, 1              ; report a failed write as unsuccessful execution.
-    syscall
+    mov rax, 60             ; syscall number: exit(2).
+    mov rdi, 1              ; arg1 status = 1 for a failed write.
+    syscall                 ; process terminates; no return to user code.
 
 ; write_c_string_stdout
 ;   Input:  rsi = pointer to a NUL-terminated argv string.
@@ -111,9 +111,10 @@ write_c_string_stdout:
 ; pipe this is adequate for a first teaching version; robust retry loops can be
 ; introduced later in `cat` or `dd`-style examples.
 write_buffer_stdout:
-    mov rax, 1              ; write(2)
-    mov rdi, 1              ; stdout file descriptor.
-    syscall
+    mov rax, 1              ; syscall number: write(2).
+    mov rdi, 1              ; arg1 fd = 1 (stdout).
+    ; arg2 rsi = bytes; arg3 rdx = byte count.
+    syscall                 ; returns bytes written or a negative errno.
     cmp rax, rdx            ; success for this simple helper means all bytes wrote.
     jne .write_failed
     xor rax, rax            ; return 0 for success.

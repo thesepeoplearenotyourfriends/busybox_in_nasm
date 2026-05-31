@@ -64,10 +64,10 @@ _start:
     jmp .unexpected_operand
 
 .print_working_directory:
-    mov rax, 79             ; getcwd(2) syscall number on Linux x86_64.
-    lea rdi, [cwd_buffer]   ; destination buffer for the kernel's C string.
-    mov rsi, 4096           ; number of bytes available in cwd_buffer.
-    syscall
+    mov rax, 79             ; syscall number: getcwd(2).
+    lea rdi, [cwd_buffer]   ; arg1 buf = destination for kernel's C string.
+    mov rsi, 4096           ; arg2 size = bytes available in cwd_buffer.
+    syscall                 ; returns a byte count or a negative errno.
     test rax, rax           ; Linux returns a negative errno value on failure.
     js .getcwd_failed
 
@@ -137,14 +137,14 @@ _start:
     jmp .exit_failure
 
 .exit_success:
-    mov rax, 60             ; exit(2)
-    xor rdi, rdi            ; status 0.
-    syscall
+    mov rax, 60             ; syscall number: exit(2).
+    xor rdi, rdi            ; arg1 status = 0 (success).
+    syscall                 ; process terminates; no return to user code.
 
 .exit_failure:
-    mov rax, 60             ; exit(2)
-    mov rdi, 1              ; status 1.
-    syscall
+    mov rax, 60             ; syscall number: exit(2).
+    mov rdi, 1              ; arg1 status = 1 (failure).
+    syscall                 ; process terminates; no return to user code.
 
 ; starts_with_dash
 ;   Input:  rsi = pointer to a NUL-terminated string.
@@ -192,9 +192,10 @@ write_c_string_fd:
 ; For this small first pass, a short write is treated as failure. A later stream
 ; utility such as cat or tee can teach retry loops for partial writes.
 write_buffer_fd:
-    mov rax, 1              ; write(2)
-    syscall
-    cmp rax, rdx
+    mov rax, 1              ; syscall number: write(2).
+    ; arg1 rdi = file descriptor; arg2 rsi = bytes; arg3 rdx = byte count.
+    syscall                 ; returns bytes written or a negative errno.
+    cmp rax, rdx            ; short writes are failure in this teaching pass.
     jne .write_failed
     xor rax, rax
     ret

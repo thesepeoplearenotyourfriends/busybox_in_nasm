@@ -41,9 +41,9 @@ utsname_buffer: resb UTS_FIELD_SIZE * 6
 
 section .text
 _start:
-    mov rax, 63                 ; uname(2)
-    lea rdi, [utsname_buffer]
-    syscall
+    mov rax, 63                 ; syscall number: uname(2).
+    lea rdi, [utsname_buffer]   ; arg1 buf = output utsname structure.
+    syscall                     ; kernel fills the fixed-size utsname fields.
     test rax, rax
     js .uname_failed
 
@@ -69,14 +69,14 @@ _start:
     jmp .exit_failure
 
 .exit_success:
-    mov rax, 60                 ; exit(2)
-    xor rdi, rdi                ; status 0.
-    syscall
+    mov rax, 60                 ; syscall number: exit(2).
+    xor rdi, rdi                ; arg1 status = 0 (success).
+    syscall                     ; process terminates; no return to user code.
 
 .exit_failure:
-    mov rax, 60                 ; exit(2)
-    mov rdi, 1                  ; status 1.
-    syscall
+    mov rax, 60                 ; syscall number: exit(2).
+    mov rdi, 1                  ; arg1 status = 1 (failure).
+    syscall                     ; process terminates; no return to user code.
 
 ; write_c_string_fd
 ;   Input:  rdi = file descriptor, rsi = NUL-terminated string.
@@ -101,9 +101,10 @@ write_c_string_fd:
 ;   Output: rax = 0 on success, 1 on write failure.
 ;   Clobbers: rax, rcx, r11.
 write_buffer_fd:
-    mov rax, 1                  ; write(2)
-    syscall
-    cmp rax, rdx
+    mov rax, 1                  ; syscall number: write(2).
+    ; arg1 rdi = file descriptor; arg2 rsi = bytes; arg3 rdx = byte count.
+    syscall                     ; returns bytes written or a negative errno.
+    cmp rax, rdx                ; short writes are failure in this teaching pass.
     jne .write_failed
     xor rax, rax
     ret

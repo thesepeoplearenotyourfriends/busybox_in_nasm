@@ -55,30 +55,30 @@ _start:
     jmp .unexpected_operand
 
 .lookup_effective_user:
-    mov rax, 107                ; geteuid(2)
-    syscall
-    mov r12, rax                ; target effective UID.
+    mov rax, 107                ; syscall number: geteuid(2).
+    syscall                     ; no arguments; returns the effective UID in rax.
+    mov r12, rax                ; r12 = target effective UID for passwd matching.
 
-    mov rax, 2                  ; open(2)
-    lea rdi, [passwd_path]
-    xor rsi, rsi                ; O_RDONLY.
-    xor rdx, rdx                ; mode is unused without O_CREAT.
-    syscall
+    mov rax, 2                  ; syscall number: open(2).
+    lea rdi, [passwd_path]      ; arg1 pathname = /etc/passwd.
+    xor rsi, rsi                ; arg2 flags = O_RDONLY.
+    xor rdx, rdx                ; arg3 mode unused without O_CREAT.
+    syscall                     ; returns fd or a negative errno.
     test rax, rax
     js .open_failed
     mov r13, rax                ; file descriptor.
 
-    mov rax, 0                  ; read(2)
-    mov rdi, r13
-    lea rsi, [passwd_buffer]
-    mov rdx, PASSWD_BUFFER_SIZE
-    syscall
+    mov rax, 0                  ; syscall number: read(2).
+    mov rdi, r13                ; arg1 fd = opened /etc/passwd descriptor.
+    lea rsi, [passwd_buffer]    ; arg2 buf = fixed teaching buffer.
+    mov rdx, PASSWD_BUFFER_SIZE ; arg3 count = maximum bytes to read.
+    syscall                     ; returns bytes read or a negative errno.
     test rax, rax
     js .read_failed
     mov r14, rax                ; bytes read.
 
-    mov rax, 3                  ; close(2)
-    mov rdi, r13
+    mov rax, 3                  ; syscall number: close(2).
+    mov rdi, r13                ; arg1 fd = /etc/passwd descriptor.
     syscall                     ; close failure does not change lookup result.
 
     lea r15, [passwd_buffer]    ; current scan pointer.
@@ -134,7 +134,7 @@ _start:
     cmp al, '9'
     ja .skip_to_next_line
 
-    imul r10, r10, 10
+    imul r10, r10, 10          ; decimal parse: move previous digits left.
     movzx rax, al
     sub rax, '0'
     add r10, rax
@@ -235,9 +235,9 @@ _start:
     mov rsi, read_failed_message
     mov rdi, 2
     call write_c_string_fd
-    mov rax, 3                  ; close(2)
-    mov rdi, r13
-    syscall
+    mov rax, 3                  ; syscall number: close(2).
+    mov rdi, r13                ; arg1 fd = /etc/passwd descriptor.
+    syscall                     ; best-effort cleanup before reporting read failure.
     jmp .exit_failure
 
 .not_found:
@@ -247,14 +247,14 @@ _start:
     jmp .exit_failure
 
 .exit_success:
-    mov rax, 60                 ; exit(2)
-    xor rdi, rdi
-    syscall
+    mov rax, 60                 ; syscall number: exit(2).
+    xor rdi, rdi                ; arg1 status = 0 (success).
+    syscall                     ; process terminates; no return to user code.
 
 .exit_failure:
-    mov rax, 60                 ; exit(2)
-    mov rdi, 1
-    syscall
+    mov rax, 60                 ; syscall number: exit(2).
+    mov rdi, 1                  ; arg1 status = 1 (failure).
+    syscall                     ; process terminates; no return to user code.
 
 starts_with_dash:
     cmp byte [rsi], '-'
@@ -278,9 +278,10 @@ write_c_string_fd:
     ret
 
 write_buffer_fd:
-    mov rax, 1                  ; write(2)
-    syscall
-    cmp rax, rdx
+    mov rax, 1                  ; syscall number: write(2).
+    ; arg1 rdi = file descriptor; arg2 rsi = bytes; arg3 rdx = byte count.
+    syscall                     ; returns bytes written or a negative errno.
+    cmp rax, rdx                ; short writes are failure in this teaching pass.
     jne .write_failed
     xor rax, rax
     ret
