@@ -24,15 +24,15 @@ Educational clarity is more important than cleverness, size, or speed.
 
 | Utility | Level | Status | Notes |
 | --- | ---: | --- | --- |
-| `true` | 00 | implemented | exits with status 0 |
-| `false` | 00 | implemented | exits with status 1 |
-| `echo` | 00 | implemented | supports plain operands and `-n`; unsupported option handling is intentionally explicit |
-| `yes` | 00 | implemented | writes `y` repeatedly, or the provided operands joined by spaces |
-| `pwd` | 00 | implemented | prints the kernel current working directory with `getcwd(2)` |
-| `arch` | 00 | implemented | prints the machine hardware name from `uname(2)` |
-| `ascii` | 00 | implemented | prints a compact 7-bit ASCII reference table |
-| `clear` | 00 | implemented | writes an ANSI/VT100 clear-screen sequence |
-| `uname` | 00 | implemented | prints the kernel name by default; supports `-m` |
+| `true` | 00 | ✅ | exits with status 0 |
+| `false` | 00 | ✅ | exits with status 1 |
+| `echo` | 00 | ✅ | supports plain operands and `-n`; unsupported option handling is intentionally explicit |
+| `yes` | 00 | ✅ | writes `y` repeatedly, or the provided operands joined by spaces |
+| `pwd` | 00 | ✅ | prints the kernel current working directory with `getcwd(2)` |
+| `arch` | 00 | ✅ | prints the machine hardware name from `uname(2)` |
+| `ascii` | 00 | ✅ | prints a compact 7-bit ASCII reference table |
+| `clear` | 00 | ✅ | writes an ANSI/VT100 clear-screen sequence |
+| `uname` | 00 | ✅ | prints the kernel name by default; supports `-m` |
 
 Difficulty and topic metadata are tracked in `docs/command_index.tsv`; per-command teaching contracts are tracked in `docs/commands.md`. Source files stay flat under `src/` so commands remain easy to find by name.
 
