@@ -119,6 +119,8 @@ The project should pick new applets from the lowest unfinished level unless a co
   - `./build/uname -a; echo $?`
 - **Known limitations:** reads only the `sysname` and `machine` fields from Linux utsname.
 
-## Next applets by difficulty
+## Roadmap direction
 
-The next target should be `cat` because the current Level 00 diagnostic batch is now complete. After that, continue with the first stream and file tools: `head`, `wc`, `tee`, and `rev`.
+Implementation order is tracked in `docs/roadmap.md`.
+
+Do not treat this file as the scheduling source. This file documents applets that exist or have implementation notes. When choosing the next applet batch, consult `docs/roadmap.md` and `docs/applet_index.tsv`.
