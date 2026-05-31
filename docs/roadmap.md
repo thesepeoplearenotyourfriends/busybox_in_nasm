@@ -2,7 +2,7 @@
 
 This project grows by adding familiar Linux utilities in educational difficulty order. BusyBox is useful as a source catalog for command names, but implementation here should remain original and teaching-focused.
 
-Do **not** choose applets alphabetically. Pick from the lowest unfinished level unless a task explicitly says otherwise.
+Do **not** choose commands alphabetically. Pick from the lowest unfinished level unless a task explicitly says otherwise.
 
 ## Source layout and metadata
 
@@ -18,8 +18,8 @@ src/
 
 Track difficulty and teaching tags in documentation instead of source directories:
 
-- `docs/applet_index.tsv` is the compact command / level / tag index.
-- `docs/applets.md` records each implemented applet's supported subset, missing behavior, syscalls, manual tests, and limitations.
+- `docs/command_index.tsv` is the compact command / level / tag index.
+- `docs/commands.md` records each implemented command's supported subset, missing behavior, syscalls, manual tests, and limitations.
 
 This keeps `src/cat.asm` easy to find while still making difficulty order reviewable.
 
@@ -148,7 +148,7 @@ A simple `tar` reader that lists or extracts plain ustar archives can be educati
 
 Purpose: parsers, interpreters, REPLs, terminal UI, line editing, regular expressions, scripting semantics, job control, shell expansion, and quoting rules.
 
-Examples include `ash`, `awk`, `bc`, `dc`, `ed`, `hexedit`, `hush`, `mim`, `sed`, `sh`, and `vi`. Do not begin here. For `mim`, first confirm the exact BusyBox applet semantics for the target BusyBox version before implementation.
+Examples include `ash`, `awk`, `bc`, `dc`, `ed`, `hexedit`, `hush`, `mim`, `sed`, `sh`, and `vi`. Do not begin here. For `mim`, first confirm the exact BusyBox command semantics for the target BusyBox version before implementation.
 
 ## Suggested implementation batches
 
