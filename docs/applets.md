@@ -2,8 +2,6 @@
 
 This file records the teaching contract for each implemented applet. The source files stay flat under `src/`; difficulty and topic metadata live in documentation so a command remains easy to find by name.
 
-The project should pick new applets from the lowest unfinished level unless a contributor is explicitly asked to do otherwise.
-
 ## Implemented applets
 
 ### `true`
