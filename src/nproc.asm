@@ -26,6 +26,9 @@ default rel
 
 global _start
 
+; Linux cpu_set_t-style masks are bitsets. 128 bytes * 8 bits/byte lets
+; this teaching version represent CPU numbers 0 through 1023 (1024 possible
+; CPU bits) without introducing dynamic allocation yet.
 %define CPU_MASK_BYTES 128
 
 section .rodata
@@ -43,8 +46,8 @@ number_buffer: resb 20
 
 section .text
 _start:
-    mov r12, [rsp]              ; argc.
-    lea r13, [rsp + 8]          ; argv pointer array.
+    mov r12, [rsp]              ; r12 = argc, kept while validating operands.
+    lea r13, [rsp + 8]          ; r13 = argv pointer array on the initial stack.
 
     cmp r12, 1
     je .print_available_processor_count
@@ -56,11 +59,13 @@ _start:
     jmp .unexpected_operand
 
 .print_available_processor_count:
-    mov rax, 204                ; sched_getaffinity(2)
-    xor rdi, rdi                ; pid 0 means current process.
-    mov rsi, CPU_MASK_BYTES
-    lea rdx, [cpu_mask]
-    syscall
+    ; sched_getaffinity(pid, cpusetsize, mask) asks the kernel which CPUs this
+    ; process may run on. Linux x86_64 syscall arguments go in rdi, rsi, rdx, ...
+    mov rax, 204                ; syscall number: sched_getaffinity(2).
+    xor rdi, rdi                ; arg1 pid = 0 means the current process.
+    mov rsi, CPU_MASK_BYTES     ; arg2 cpusetsize = bytes available in cpu_mask.
+    lea rdx, [cpu_mask]         ; arg3 mask = output buffer for CPU affinity bits.
+    syscall                     ; kernel fills cpu_mask or returns a negative errno.
     test rax, rax
     js .affinity_failed
 
@@ -140,35 +145,44 @@ _start:
     jmp .exit_failure
 
 .exit_success:
-    mov rax, 60                 ; exit(2)
-    xor rdi, rdi
-    syscall
+    mov rax, 60                 ; syscall number: exit(2).
+    xor rdi, rdi                ; arg1 status = 0 (success).
+    syscall                     ; process terminates; no return to user code.
 
 .exit_failure:
-    mov rax, 60                 ; exit(2)
-    mov rdi, 1
-    syscall
+    mov rax, 60                 ; syscall number: exit(2).
+    mov rdi, 1                  ; arg1 status = 1 (failure).
+    syscall                     ; process terminates; no return to user code.
 
 ; count_affinity_bits
+;   Input:  fixed global cpu_mask filled by sched_getaffinity(2).
 ;   Output: rax = number of set bits in the fixed cpu_mask buffer.
+;   Clobbers: r8, r9, r10, r11, rcx, rdx.
+;   Teaches: a byte loop nested around a bit loop for reading a packed bitset.
 ;   Notes:  This intentionally uses small loops instead of clever bit tricks so
 ;           the byte/bit scan is easy to follow in a debugger.
 count_affinity_bits:
-    lea r8, [cpu_mask]
-    mov r9, CPU_MASK_BYTES
-    xor r10, r10                ; total set-bit count.
+    lea r8, [cpu_mask]          ; r8 = address of the next mask byte to inspect.
+    mov r9, CPU_MASK_BYTES      ; r9 = number of bytes not processed yet.
+    xor r10, r10                ; r10 = running total of set CPU bits.
+
+    ; Byte-loop invariant: bytes before r8 have been counted, r9 bytes remain,
+    ; and r10 holds the number of 1 bits seen so far.
 .byte_loop:
     cmp r9, 0
     je .done
 
-    movzx r11, byte [r8]
-    mov rcx, 8                  ; bits remaining in this byte.
+    movzx r11, byte [r8]        ; r11 = current byte, zero-extended for shifts.
+    mov rcx, 8                  ; rcx = bits remaining in this byte.
+
+    ; Bit-loop invariant: the low bit of r11 is the next CPU bit to count.
+    ; `loop` is unusual: it decrements rcx automatically, then jumps if rcx != 0.
 .bit_loop:
     mov rdx, r11
-    and rdx, 1
-    add r10, rdx
-    shr r11, 1
-    loop .bit_loop
+    and rdx, 1                  ; mask off every bit except the current low bit.
+    add r10, rdx                ; add 0 or 1 to the total.
+    shr r11, 1                  ; shift the next CPU bit into the low-bit position.
+    loop .bit_loop              ; rcx--, repeat until all 8 bits were inspected.
 
     inc r8
     dec r9
@@ -180,10 +194,15 @@ count_affinity_bits:
 ; write_unsigned_decimal_stdout
 ;   Input:  rax = unsigned integer to print.
 ;   Output: rax = 0 on success, 1 on write failure.
+;   Clobbers: r8, r9, r10, rdx, rsi, rdi, rcx, r11.
+;   Teaches: decimal conversion by repeated division by 10.
 write_unsigned_decimal_stdout:
-    lea r8, [number_buffer + 20]
-    xor r9, r9
-    mov r10, 10
+    ; The least-significant decimal digit is produced first by division. Humans
+    ; read the most-significant digit first, so we reserve the end of the buffer
+    ; and store digits right-to-left as remainders appear.
+    lea r8, [number_buffer + 20] ; r8 = one byte past the end of the digit area.
+    xor r9, r9                  ; r9 = digit count.
+    mov r10, 10                 ; divisor for base-10 conversion.
 
     test rax, rax
     jnz .divide_loop
@@ -193,10 +212,10 @@ write_unsigned_decimal_stdout:
     jmp .write_number
 
 .divide_loop:
-    xor rdx, rdx
-    div r10
-    add dl, '0'
-    dec r8
+    xor rdx, rdx                ; unsigned div reads rdx:rax, so clear high half.
+    div r10                     ; rax = quotient, rdx = remainder 0..9.
+    add dl, '0'                ; turn numeric remainder into an ASCII digit.
+    dec r8                      ; move left because digits are built right-to-left.
     mov [r8], dl
     inc r9
     test rax, rax
@@ -218,8 +237,13 @@ starts_with_dash:
     xor rax, rax
     ret
 
+; write_c_string_fd
+;   Input:  rdi = fd, rsi = NUL-terminated string.
+;   Output: rax = 0 on full write, 1 on failure or short write.
+;   Clobbers: rax, rbx, rdx, rcx, r11.
+;   Teaches: C-string length scanning before a write(2) call.
 write_c_string_fd:
-    mov rbx, rsi
+    mov rbx, rsi                ; rbx = start of string while rdx counts bytes.
     xor rdx, rdx
 .count_loop:
     cmp byte [rbx + rdx], 0
@@ -230,10 +254,17 @@ write_c_string_fd:
     call write_buffer_fd
     ret
 
+; write_buffer_fd
+;   Input:  rdi = fd, rsi = buffer pointer, rdx = byte count.
+;   Output: rax = 0 on full write, 1 on failure or short write.
+;   Clobbers: rax, rcx, r11.
+;   Teaches: raw write(2) setup; this pass treats short writes as failure so
+;            stream retry loops can be taught later in a dedicated utility.
 write_buffer_fd:
-    mov rax, 1                  ; write(2)
-    syscall
-    cmp rax, rdx
+    mov rax, 1                  ; syscall number: write(2).
+    ; arg1 rdi = file descriptor; arg2 rsi = bytes; arg3 rdx = byte count.
+    syscall                     ; rcx and r11 are clobbered by the syscall ABI.
+    cmp rax, rdx                ; any short write is failure in this teaching pass.
     jne .write_failed
     xor rax, rax
     ret

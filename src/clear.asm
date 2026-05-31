@@ -35,20 +35,22 @@ clear_sequence_len: equ $ - clear_sequence
 
 section .text
 _start:
-    mov rax, 1                  ; write(2)
-    mov rdi, 1                  ; stdout.
-    lea rsi, [clear_sequence]
-    mov rdx, clear_sequence_len
-    syscall
+    ; write(stdout, clear_sequence, clear_sequence_len) sends literal terminal
+    ; control bytes; no libc or terminfo lookup is involved in this first pass.
+    mov rax, 1                  ; syscall number: write(2).
+    mov rdi, 1                  ; arg1 fd = 1 (stdout).
+    lea rsi, [clear_sequence]   ; arg2 buf = escape-sequence bytes.
+    mov rdx, clear_sequence_len ; arg3 count = number of bytes to write.
+    syscall                     ; returns bytes written or a negative errno.
 
     cmp rax, clear_sequence_len
     jne .exit_failure
 
-    mov rax, 60                 ; exit(2)
-    xor rdi, rdi                ; status 0.
-    syscall
+    mov rax, 60                 ; syscall number: exit(2).
+    xor rdi, rdi                ; arg1 status = 0 (success).
+    syscall                     ; process terminates; no return to user code.
 
 .exit_failure:
-    mov rax, 60                 ; exit(2)
-    mov rdi, 1                  ; status 1.
-    syscall
+    mov rax, 60                 ; syscall number: exit(2).
+    mov rdi, 1                  ; arg1 status = 1 (failure).
+    syscall                     ; process terminates; no return to user code.

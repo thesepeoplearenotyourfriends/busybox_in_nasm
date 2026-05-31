@@ -24,6 +24,6 @@ global _start
 
 section .text
 _start:
-    mov rax, 60     ; exit(2) syscall number on Linux x86_64.
-    mov rdi, 1      ; process status 1 means general failure.
-    syscall         ; terminate the process; this does not return.
+    mov rax, 60     ; syscall number: exit(2) on Linux x86_64.
+    mov rdi, 1      ; arg1 status = 1, so shells see failure.
+    syscall         ; process terminates; no return to user code.

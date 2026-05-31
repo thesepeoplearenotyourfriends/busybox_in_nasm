@@ -23,6 +23,8 @@ The first utilities are intentionally small. They demonstrate:
 
 Educational clarity is more important than cleverness, size, or speed.
 
+Level 00 is complete — time for cake and confetti! 🎂🎊
+
 ## Current utilities
 
 | Utility | Level | Status | Notes |
@@ -41,6 +43,9 @@ Educational clarity is more important than cleverness, size, or speed.
 | `sleep` | 00 | ✅ | sleeps for one unsigned decimal seconds operand |
 | `usleep` | 00 | ✅ | sleeps for one unsigned decimal microseconds operand |
 | `hostname` | 00 | ✅ | prints the kernel node name from `uname(2)` |
+| `hostid` | 00 | ✅ | prints an eight-hex-digit FNV-1a teaching identifier from the kernel node name |
+| `logname` | 00 | ✅ | prints the non-empty `LOGNAME` environment value in this envp-focused first pass |
+| `nproc` | 00 | ✅ | counts CPUs allowed by the current process affinity mask |
 | `whoami` | 00 | ✅ | prints the effective user name by scanning `/etc/passwd` for `geteuid(2)` |
 | `tty` | 00 | ✅ | checks stdin with `ioctl(TCGETS)` and prints its terminal path; supports silent `-s` |
 | `ttysize` | 00 | ✅ | prints terminal rows and columns from `ioctl(TIOCGWINSZ)` on stdin |
@@ -78,6 +83,9 @@ build/printenv
 build/sleep
 build/usleep
 build/hostname
+build/hostid
+build/logname
+build/nproc
 build/whoami
 build/tty
 build/ttysize
@@ -123,6 +131,9 @@ env -i ASMUTILS_TEST_VALUE=abc ./build/printenv ASMUTILS_TEST_VALUE
 ./build/usleep 1000
 
 ./build/hostname
+./build/hostid
+env LOGNAME=student ./build/logname
+./build/nproc
 ./build/whoami
 ./build/tty
 ./build/tty -s

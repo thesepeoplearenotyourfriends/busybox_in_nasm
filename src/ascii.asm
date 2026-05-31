@@ -120,21 +120,23 @@ ascii_table_len: equ $ - ascii_table
 
 section .text
 _start:
-    mov rax, 1                  ; write(2)
-    mov rdi, 1                  ; stdout.
-    lea rsi, [ascii_table]
-    mov rdx, ascii_table_len
-    syscall
+    ; write(stdout, ascii_table, ascii_table_len) prints one prebuilt teaching
+    ; table. Keeping it static lets this first lesson focus on raw write(2).
+    mov rax, 1                  ; syscall number: write(2).
+    mov rdi, 1                  ; arg1 fd = 1 (stdout).
+    lea rsi, [ascii_table]      ; arg2 buf = table bytes.
+    mov rdx, ascii_table_len    ; arg3 count = table length.
+    syscall                     ; returns bytes written or a negative errno.
 
     cmp rax, ascii_table_len
     jne .exit_failure
 
-    mov rax, 60                 ; exit(2)
-    xor rdi, rdi                ; status 0.
-    syscall
+    mov rax, 60                 ; syscall number: exit(2).
+    xor rdi, rdi                ; arg1 status = 0 (success).
+    syscall                     ; process terminates; no return to user code.
 
 .exit_failure:
-    mov rax, 60                 ; exit(2)
-    mov rdi, 1                  ; status 1.
-    syscall
+    mov rax, 60                 ; syscall number: exit(2).
+    mov rdi, 1                  ; arg1 status = 1 (failure).
+    syscall                     ; process terminates; no return to user code.
 

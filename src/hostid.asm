@@ -45,8 +45,8 @@ hex_buffer: resb 8
 
 section .text
 _start:
-    mov r12, [rsp]              ; argc.
-    lea r13, [rsp + 8]          ; argv pointer array.
+    mov r12, [rsp]              ; r12 = argc, kept while validating operands.
+    lea r13, [rsp + 8]          ; r13 = argv pointer array on the initial stack.
 
     cmp r12, 1
     je .print_host_identifier
@@ -58,9 +58,11 @@ _start:
     jmp .unexpected_operand
 
 .print_host_identifier:
-    mov rax, 63                 ; uname(2)
-    lea rdi, [utsname_buffer]
-    syscall
+    ; uname(buf) fills a Linux utsname structure. The nodename field is the
+    ; kernel hostname, stored as a fixed-size NUL-terminated byte string.
+    mov rax, 63                 ; syscall number: uname(2).
+    lea rdi, [utsname_buffer]   ; arg1 buf = output structure.
+    syscall                     ; returns 0 or a negative errno.
     test rax, rax
     js .uname_failed
 
@@ -132,27 +134,33 @@ _start:
     jmp .exit_failure
 
 .exit_success:
-    mov rax, 60                 ; exit(2)
-    xor rdi, rdi
-    syscall
+    mov rax, 60                 ; syscall number: exit(2).
+    xor rdi, rdi                ; arg1 status = 0 (success).
+    syscall                     ; process terminates; no return to user code.
 
 .exit_failure:
-    mov rax, 60                 ; exit(2)
-    mov rdi, 1
-    syscall
+    mov rax, 60                 ; syscall number: exit(2).
+    mov rdi, 1                  ; arg1 status = 1 (failure).
+    syscall                     ; process terminates; no return to user code.
 
 ; hash_c_string_fnv1a_32
 ;   Input:  rsi = zero-terminated byte string.
 ;   Output: eax = 32-bit FNV-1a hash.
-;   Notes:  Each loop step is: hash = (hash xor byte) * FNV_PRIME.
+;   Clobbers: edx, rsi.
+;   Teaches: byte-at-a-time hashing without libc. FNV-1a starts with a fixed
+;            offset basis; each byte is mixed by XOR, then multiplied by a
+;            fixed prime. Keeping the result in eax naturally keeps 32 bits.
 hash_c_string_fnv1a_32:
-    mov eax, FNV_OFFSET_BASIS
+    mov eax, FNV_OFFSET_BASIS   ; eax = running 32-bit hash value.
+
+    ; Loop invariant: bytes before rsi have already been folded into eax; rsi
+    ; points at the next hostname byte or the terminating NUL.
 .hash_loop:
     movzx edx, byte [rsi]
     test dl, dl
     jz .done
-    xor eax, edx
-    imul eax, eax, FNV_PRIME
+    xor eax, edx                ; FNV-1a mixes the next byte before multiplying.
+    imul eax, eax, FNV_PRIME    ; low 32 bits are kept, matching FNV-1a overflow.
     inc rsi
     jmp .hash_loop
 .done:
@@ -161,16 +169,23 @@ hash_c_string_fnv1a_32:
 ; write_rax_as_8_hex_digits
 ;   Input:  eax = value to print.
 ;   Output: rax = 0 on success, 1 on write failure.
+;   Clobbers: r8, rcx, rdx, rsi, rdi, r11.
+;   Teaches: fixed-width hexadecimal formatting with masking and shifts.
 write_rax_as_8_hex_digits:
-    lea r8, [hex_buffer + 8]     ; fill digits from right to left.
-    mov ecx, 8
+    ; The low hex digit is easiest to get first (value & 0x0f), but the final
+    ; text must show the high digit first. Fill an 8-byte buffer right-to-left.
+    lea r8, [hex_buffer + 8]     ; r8 = one byte past the output buffer.
+    mov ecx, 8                  ; rcx = exactly eight nibbles for a 32-bit value.
+
+    ; Loop invariant: hex digits to the right of r8 are final; eax still holds
+    ; the unformatted higher nibbles. `loop` decrements rcx before testing it.
 .hex_loop:
     mov edx, eax
-    and edx, 0x0f
-    mov dl, [hex_digits + rdx]
+    and edx, 0x0f               ; isolate the low 4-bit nibble.
+    mov dl, [hex_digits + rdx]  ; use the nibble as an index into the digit table.
     dec r8
     mov [r8], dl
-    shr eax, 4
+    shr eax, 4                  ; move the next nibble down into the low position.
     loop .hex_loop
 
     lea rsi, [hex_buffer]
@@ -188,8 +203,13 @@ starts_with_dash:
     xor rax, rax
     ret
 
+; write_c_string_fd
+;   Input:  rdi = fd, rsi = NUL-terminated string.
+;   Output: rax = 0 on full write, 1 on failure or short write.
+;   Clobbers: rax, rbx, rdx, rcx, r11.
+;   Teaches: converting a C string into the pointer+length pair write(2) needs.
 write_c_string_fd:
-    mov rbx, rsi
+    mov rbx, rsi                ; rbx = stable string start while rdx counts.
     xor rdx, rdx
 .count_loop:
     cmp byte [rbx + rdx], 0
@@ -200,10 +220,16 @@ write_c_string_fd:
     call write_buffer_fd
     ret
 
+; write_buffer_fd
+;   Input:  rdi = fd, rsi = buffer pointer, rdx = byte count.
+;   Output: rax = 0 on full write, 1 on failure or short write.
+;   Clobbers: rax, rcx, r11.
+;   Teaches: raw write(2) setup for stdout/stderr messages.
 write_buffer_fd:
-    mov rax, 1                  ; write(2)
-    syscall
-    cmp rax, rdx
+    mov rax, 1                  ; syscall number: write(2).
+    ; arg1 rdi = file descriptor; arg2 rsi = bytes; arg3 rdx = byte count.
+    syscall                     ; returns bytes written or a negative errno.
+    cmp rax, rdx                ; short writes are failure in this teaching pass.
     jne .write_failed
     xor rax, rax
     ret

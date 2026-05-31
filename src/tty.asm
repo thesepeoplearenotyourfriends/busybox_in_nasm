@@ -77,19 +77,19 @@ _start:
     jmp .unexpected_operand_from_rsi
 
 .check_stdin:
-    mov rax, 16                 ; ioctl(2)
-    mov rdi, 0                  ; stdin.
-    mov rsi, TCGETS
-    lea rdx, [termios_buffer]
-    syscall
+    mov rax, 16                 ; syscall number: ioctl(2).
+    mov rdi, 0                  ; arg1 fd = 0 (stdin).
+    mov rsi, TCGETS             ; arg2 request = read terminal attributes.
+    lea rdx, [termios_buffer]   ; arg3 pointer = where the kernel writes termios.
+    syscall                     ; success means stdin behaves like a terminal.
     test rax, rax
     js .not_a_tty
 
-    mov rax, 89                 ; readlink(2)
-    lea rdi, [fd0_path]
-    lea rsi, [link_buffer]
-    mov rdx, 4095               ; leave room for a newline byte.
-    syscall
+    mov rax, 89                 ; syscall number: readlink(2).
+    lea rdi, [fd0_path]         ; arg1 path = /proc/self/fd/0 symlink.
+    lea rsi, [link_buffer]      ; arg2 buf = destination for link target bytes.
+    mov rdx, 4095               ; arg3 bufsiz; leave room for a newline byte.
+    syscall                     ; returns byte count; readlink does not append NUL.
     test rax, rax
     js .not_a_tty
 
@@ -172,14 +172,14 @@ _start:
     jmp .exit_failure
 
 .exit_success:
-    mov rax, 60                 ; exit(2)
-    xor rdi, rdi
-    syscall
+    mov rax, 60                 ; syscall number: exit(2).
+    xor rdi, rdi                ; arg1 status = 0 (success).
+    syscall                     ; process terminates; no return to user code.
 
 .exit_failure:
-    mov rax, 60                 ; exit(2)
-    mov rdi, 1
-    syscall
+    mov rax, 60                 ; syscall number: exit(2).
+    mov rdi, 1                  ; arg1 status = 1 (failure).
+    syscall                     ; process terminates; no return to user code.
 
 link_target_starts_with_dev:
     cmp r15, 5
@@ -235,9 +235,10 @@ write_c_string_fd:
     ret
 
 write_buffer_fd:
-    mov rax, 1                  ; write(2)
-    syscall
-    cmp rax, rdx
+    mov rax, 1                  ; syscall number: write(2).
+    ; arg1 rdi = file descriptor; arg2 rsi = bytes; arg3 rdx = byte count.
+    syscall                     ; returns bytes written or a negative errno.
+    cmp rax, rdx                ; short writes are failure in this teaching pass.
     jne .write_failed
     xor rax, rax
     ret

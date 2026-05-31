@@ -70,10 +70,10 @@ _start:
     mov [request_timespec], rax
     mov qword [request_timespec + 8], 0
 
-    mov rax, 35             ; nanosleep(2) syscall number on Linux x86_64.
-    lea rdi, [request_timespec]
-    lea rsi, [remaining_timespec]
-    syscall
+    mov rax, 35             ; syscall number: nanosleep(2).
+    lea rdi, [request_timespec] ; arg1 req = requested sleep duration.
+    lea rsi, [remaining_timespec] ; arg2 rem = where interrupted time would go.
+    syscall                 ; returns 0 on full sleep or a negative errno.
     test rax, rax
     js .nanosleep_failed
     jmp .exit_success
@@ -160,14 +160,14 @@ _start:
     jmp .exit_failure
 
 .exit_success:
-    mov rax, 60             ; exit(2)
-    xor rdi, rdi            ; status 0.
-    syscall
+    mov rax, 60             ; syscall number: exit(2).
+    xor rdi, rdi            ; arg1 status = 0 (success).
+    syscall                 ; process terminates; no return to user code.
 
 .exit_failure:
-    mov rax, 60             ; exit(2)
-    mov rdi, 1              ; status 1.
-    syscall
+    mov rax, 60             ; syscall number: exit(2).
+    mov rdi, 1              ; arg1 status = 1 (failure).
+    syscall                 ; process terminates; no return to user code.
 
 parse_unsigned_decimal:
     xor rax, rax            ; parsed value.
@@ -182,7 +182,7 @@ parse_unsigned_decimal:
     jb .invalid
     cmp bl, '9'
     ja .invalid
-    imul rax, rax, 10
+    imul rax, rax, 10      ; decimal parse: shift old digits one base-10 place.
     sub bl, '0'
     movzx rbx, bl
     add rax, rbx
@@ -215,9 +215,10 @@ write_c_string_fd:
     ret
 
 write_buffer_fd:
-    mov rax, 1              ; write(2)
-    syscall
-    cmp rax, rdx
+    mov rax, 1              ; syscall number: write(2).
+    ; arg1 rdi = file descriptor; arg2 rsi = bytes; arg3 rdx = byte count.
+    syscall                 ; returns bytes written or a negative errno.
+    cmp rax, rdx            ; short writes are failure in this teaching pass.
     jne .write_failed
     xor rax, rax
     ret

@@ -41,16 +41,18 @@ unsupported_suffix: db "printenv: this teaching version supports NAME operands o
 
 section .text
 _start:
-    mov r12, [rsp]          ; argc, including argv[0].
-    lea r13, [rsp + 8]      ; argv pointer array.
-    lea r14, [r13 + r12*8 + 8] ; envp pointer array starts after argv NULL.
-    xor r15, r15            ; missing-name flag: 0 = all found so far.
+    mov r12, [rsp]          ; r12 = argc, including argv[0].
+    lea r13, [rsp + 8]      ; r13 = argv pointer array.
+    lea r14, [r13 + r12*8 + 8] ; r14 = envp pointer array after argv NULL.
+    xor r15, r15            ; r15 = missing-name flag: 0 means all found so far.
 
     cmp r12, 1
     je .print_all_environment
 
-    mov rbx, 1              ; argv index for requested variable names.
+    mov rbx, 1              ; rbx = argv index for requested variable names.
 
+    ; Loop invariant: requested names before rbx have been searched; r15 records
+    ; whether any of those names were missing.
 .name_loop:
     cmp rbx, r12
     jae .finish_named_lookup
@@ -76,7 +78,10 @@ _start:
     jmp .exit_success
 
 .print_all_environment:
-    mov rbx, r14
+    mov rbx, r14            ; rbx = current envp slot for print-all mode.
+
+    ; Loop invariant: envp entries before rbx have been printed; rbx points at
+    ; the next entry pointer or the NULL terminator.
 .print_all_loop:
     mov rsi, [rbx]
     test rsi, rsi
@@ -123,22 +128,24 @@ _start:
     jmp .exit_failure
 
 .exit_success:
-    mov rax, 60             ; exit(2)
-    xor rdi, rdi            ; status 0.
-    syscall
+    mov rax, 60             ; syscall number: exit(2).
+    xor rdi, rdi            ; arg1 status = 0 (success).
+    syscall                 ; process terminates; no return to user code.
 
 .exit_failure:
-    mov rax, 60             ; exit(2)
-    mov rdi, 1              ; status 1.
-    syscall
+    mov rax, 60             ; syscall number: exit(2).
+    mov rdi, 1              ; arg1 status = 1 (failure).
+    syscall                 ; process terminates; no return to user code.
 
 ; find_and_print_name
 ;   Input:  rdi = requested NAME, r14 = envp pointer array.
 ;   Output: rax = 0 if found and printed, 1 if not found or write failed.
 ;   Clobbers: rax, rsi, rdx, r8-r11, rcx.
 find_and_print_name:
-    mov r8, rdi             ; requested NAME.
-    mov r9, r14             ; current envp slot.
+    mov r8, rdi             ; r8 = requested NAME kept across comparisons.
+    mov r9, r14             ; r9 = current envp slot.
+
+    ; Loop invariant: envp slots before r9 did not match the requested NAME.
 .search_loop:
     mov r10, [r9]
     test r10, r10
@@ -173,8 +180,12 @@ find_and_print_name:
 ; name_matches_environment_entry
 ;   Input:  rdi = requested NAME, rsi = environment entry NAME=VALUE.
 ;   Output: rax = pointer to VALUE if NAME matches exactly, otherwise 0.
+;   Clobbers: rdx, al.
+;   Teaches: compare NAME only, then require an equals sign before VALUE.
 name_matches_environment_entry:
-    xor rdx, rdx
+    xor rdx, rdx            ; rdx = byte offset into both strings.
+
+    ; Loop invariant: all bytes before rdx matched exactly.
 .compare_loop:
     mov al, [rdi + rdx]
     test al, al
@@ -205,8 +216,13 @@ write_c_string_stdout:
     mov rdi, 1              ; stdout.
     jmp write_c_string_fd
 
+; write_c_string_fd
+;   Input:  rdi = fd, rsi = NUL-terminated string.
+;   Output: rax = 0 on full write, 1 on failure or short write.
+;   Clobbers: rax, r11, rdx, rcx.
+;   Teaches: convert C strings from argv/envp into write(2) byte counts.
 write_c_string_fd:
-    mov r11, rsi
+    mov r11, rsi            ; r11 = stable string start while rdx counts.
     xor rdx, rdx
 .count_loop:
     cmp byte [r11 + rdx], 0
@@ -218,9 +234,10 @@ write_c_string_fd:
     ret
 
 write_buffer_fd:
-    mov rax, 1              ; write(2)
-    syscall
-    cmp rax, rdx
+    mov rax, 1              ; syscall number: write(2).
+    ; arg1 rdi = file descriptor; arg2 rsi = bytes; arg3 rdx = byte count.
+    syscall                 ; returns bytes written or a negative errno.
+    cmp rax, rdx            ; short writes are failure in this teaching pass.
     jne .write_failed
     xor rax, rax
     ret

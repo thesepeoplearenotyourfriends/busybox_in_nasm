@@ -53,11 +53,11 @@ _start:
     jmp .unexpected_operand
 
 .read_window_size:
-    mov rax, 16                 ; ioctl(2)
-    mov rdi, 0                  ; stdin is the terminal being queried.
-    mov rsi, TIOCGWINSZ
-    lea rdx, [winsize_buffer]
-    syscall
+    mov rax, 16                 ; syscall number: ioctl(2).
+    mov rdi, 0                  ; arg1 fd = 0 (stdin terminal being queried).
+    mov rsi, TIOCGWINSZ         ; arg2 request = read terminal window size.
+    lea rdx, [winsize_buffer]   ; arg3 pointer = kernel writes struct winsize.
+    syscall                     ; returns 0 or a negative errno.
     test rax, rax
     js .ioctl_failed
 
@@ -140,14 +140,14 @@ _start:
     jmp .exit_failure
 
 .exit_success:
-    mov rax, 60                 ; exit(2)
-    xor rdi, rdi
-    syscall
+    mov rax, 60                 ; syscall number: exit(2).
+    xor rdi, rdi                ; arg1 status = 0 (success).
+    syscall                     ; process terminates; no return to user code.
 
 .exit_failure:
-    mov rax, 60                 ; exit(2)
-    mov rdi, 1
-    syscall
+    mov rax, 60                 ; syscall number: exit(2).
+    mov rdi, 1                  ; arg1 status = 1 (failure).
+    syscall                     ; process terminates; no return to user code.
 
 starts_with_dash:
     cmp byte [rsi], '-'
@@ -176,7 +176,7 @@ write_unsigned_decimal_stdout:
 
 .divide_loop:
     xor rdx, rdx
-    div r10                     ; rax = quotient, rdx = remainder.
+    div r10                     ; unsigned divide rdx:rax by 10; remainder is digit.
     add dl, '0'
     dec r8
     mov [r8], dl
@@ -204,9 +204,10 @@ write_c_string_fd:
     ret
 
 write_buffer_fd:
-    mov rax, 1                  ; write(2)
-    syscall
-    cmp rax, rdx
+    mov rax, 1                  ; syscall number: write(2).
+    ; arg1 rdi = file descriptor; arg2 rsi = bytes; arg3 rdx = byte count.
+    syscall                     ; returns bytes written or a negative errno.
+    cmp rax, rdx                ; short writes are failure in this teaching pass.
     jne .write_failed
     xor rax, rax
     ret

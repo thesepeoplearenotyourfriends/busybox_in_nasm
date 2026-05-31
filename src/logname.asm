@@ -36,9 +36,11 @@ empty_message: db "logname: LOGNAME is empty in the environment", 10, 0
 
 section .text
 _start:
-    mov r12, [rsp]              ; argc.
-    lea r13, [rsp + 8]          ; argv pointer array.
-    lea r14, [r13 + r12*8 + 8]  ; envp starts after the argv NULL pointer.
+    mov r12, [rsp]              ; r12 = argc, kept while validating operands.
+    lea r13, [rsp + 8]          ; r13 = argv pointer array on the initial stack.
+    ; At process entry the stack is argc, argv pointers, a NULL argv terminator,
+    ; then envp pointers. r14 is long-lived: it always points at envp[0].
+    lea r14, [r13 + r12*8 + 8]  ; r14 = envp pointer array after argv NULL.
 
     cmp r12, 1
     je .print_logname
@@ -131,21 +133,26 @@ _start:
     jmp .exit_failure
 
 .exit_success:
-    mov rax, 60                 ; exit(2)
-    xor rdi, rdi
-    syscall
+    mov rax, 60                 ; syscall number: exit(2).
+    xor rdi, rdi                ; arg1 status = 0 (success).
+    syscall                     ; process terminates; no return to user code.
 
 .exit_failure:
-    mov rax, 60                 ; exit(2)
-    mov rdi, 1
-    syscall
+    mov rax, 60                 ; syscall number: exit(2).
+    mov rdi, 1                  ; arg1 status = 1 (failure).
+    syscall                     ; process terminates; no return to user code.
 
 ; find_environment_value
 ;   Input:  rdi = requested NAME, r14 = envp pointer array.
 ;   Output: rax = pointer to VALUE when NAME=VALUE exists, otherwise 0.
+;   Clobbers: r8, r9, r10, rdi, rsi, rdx.
+;   Teaches: envp is a NULL-terminated array of pointers to NAME=VALUE strings.
 find_environment_value:
-    mov r8, rdi                 ; requested name.
-    mov r9, r14                 ; current envp slot.
+    mov r8, rdi                 ; r8 = requested name kept across comparisons.
+    mov r9, r14                 ; r9 = current envp slot being examined.
+
+    ; Loop invariant: envp slots before r9 were checked and did not match. A
+    ; NULL pointer marks the end of the environment array.
 .search_loop:
     mov r10, [r9]
     test r10, r10
@@ -168,8 +175,13 @@ find_environment_value:
 ; name_matches_environment_entry
 ;   Input:  rdi = requested NAME, rsi = environment entry NAME=VALUE.
 ;   Output: rax = pointer to VALUE on exact NAME match, otherwise 0.
+;   Clobbers: rdx, al.
+;   Teaches: matching only the NAME part so LOGNAME2=... does not match LOGNAME.
 name_matches_environment_entry:
-    xor rdx, rdx
+    xor rdx, rdx                ; rdx = byte offset into both strings.
+
+    ; Loop invariant: bytes before rdx matched exactly. The requested name must
+    ; end at the same position where the environment entry has '='.
 .compare_loop:
     mov al, [rdi + rdx]
     test al, al
@@ -196,8 +208,14 @@ starts_with_dash:
     xor rax, rax
     ret
 
+; write_c_string_fd
+;   Input:  rdi = fd, rsi = NUL-terminated string.
+;   Output: rax = 0 on full write, 1 on failure or short write.
+;   Clobbers: rax, rbx, rdx, rcx, r11.
+;   Teaches: C strings must be counted before Linux write(2), which has no NUL
+;            terminator convention.
 write_c_string_fd:
-    mov rbx, rsi
+    mov rbx, rsi                ; rbx = stable string start while rdx counts.
     xor rdx, rdx
 .count_loop:
     cmp byte [rbx + rdx], 0
@@ -208,10 +226,16 @@ write_c_string_fd:
     call write_buffer_fd
     ret
 
+; write_buffer_fd
+;   Input:  rdi = fd, rsi = buffer pointer, rdx = byte count.
+;   Output: rax = 0 on full write, 1 on failure or short write.
+;   Clobbers: rax, rcx, r11.
+;   Teaches: raw write(2) setup after envp scanning finds text to print.
 write_buffer_fd:
-    mov rax, 1                  ; write(2)
-    syscall
-    cmp rax, rdx
+    mov rax, 1                  ; syscall number: write(2).
+    ; arg1 rdi = file descriptor; arg2 rsi = bytes; arg3 rdx = byte count.
+    syscall                     ; returns bytes written or a negative errno.
+    cmp rax, rdx                ; short writes are failure in this teaching pass.
     jne .write_failed
     xor rax, rax
     ret
