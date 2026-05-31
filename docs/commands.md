@@ -169,6 +169,56 @@ This file records the teaching contract for each implemented command. The source
   - `./build/usleep --help; echo $?`
 - **Known limitations:** interrupted sleeps currently report failure instead of retrying the remaining timespec.
 
+
+### `hostname`
+
+- **Difficulty level:** 00 — primer / smoke-test command.
+- **Tags:** `utsname`, `uname-syscall`, `stdout`, `option-subset`.
+- **Implemented behavior:** with no operands, asks the kernel for utsname data and prints the node name followed by a newline.
+- **Unsupported behavior:** setting the hostname, short options such as `-s` / `-f`, long options, and operands are rejected.
+- **Syscalls used:** `uname(2)`, `write(2)`, and `exit(2)`.
+- **Manual tests:**
+  - `test "$(./build/hostname)" = "$(uname -n)"`
+  - `./build/hostname --help; echo $?`
+- **Known limitations:** reads only the Linux utsname `nodename` field and does not call `sethostname(2)`.
+
+### `whoami`
+
+- **Difficulty level:** 00 — primer / smoke-test command.
+- **Tags:** `geteuid-syscall`, `passwd-file`, `account-lookup`, `stdout`, `option-subset`.
+- **Implemented behavior:** with no operands, calls `geteuid(2)`, scans `/etc/passwd`, and prints the first user name whose UID field matches the effective UID.
+- **Unsupported behavior:** options, operands, libc NSS backends, LDAP, systemd-homed, and multi-read handling for unusually large passwd files are not implemented.
+- **Syscalls used:** `geteuid(2)`, `open(2)`, `read(2)`, `close(2)`, `write(2)`, and `exit(2)`.
+- **Manual tests:**
+  - `test "$(./build/whoami)" = "$(id -un)"`
+  - `./build/whoami extra; echo $?`
+- **Known limitations:** reads only `/etc/passwd` into one fixed buffer; systems where the effective UID is known only through another NSS backend will not resolve.
+
+### `tty`
+
+- **Difficulty level:** 00 — primer / smoke-test command.
+- **Tags:** `ioctl-syscall`, `procfs`, `readlink-syscall`, `stdin`, `tty-detection`, `option-subset`.
+- **Implemented behavior:** with no operands, checks stdin with `ioctl(TCGETS)` and then reads `/proc/self/fd/0` to print the terminal path; with `-s`, prints nothing and reports only success or failure.
+- **Unsupported behavior:** long options and operands are rejected; this first pass does not use libc `ttyname(3)`.
+- **Syscalls used:** `ioctl(2)`, `readlink(2)`, `write(2)`, and `exit(2)`.
+- **Manual tests:**
+  - `./build/tty`
+  - `./build/tty -s; echo $?`
+  - `./build/tty </dev/null; echo $?`
+- **Known limitations:** uses procfs to name the terminal after the ioctl check succeeds; systems without `/proc/self/fd/0` will not resolve a printable path.
+
+### `ttysize`
+
+- **Difficulty level:** 00 — primer / smoke-test command.
+- **Tags:** `ioctl-syscall`, `terminal-size`, `stdin`, `decimal-format`.
+- **Implemented behavior:** with no operands, calls `ioctl(TIOCGWINSZ)` on stdin and prints `rows columns` followed by a newline.
+- **Unsupported behavior:** options, operands, alternate output formats, stdout/stderr terminal fallback, and pixel dimensions are not implemented.
+- **Syscalls used:** `ioctl(2)`, `write(2)`, and `exit(2)`.
+- **Manual tests:**
+  - `./build/ttysize`
+  - `./build/ttysize </dev/null; echo $?`
+- **Known limitations:** requires stdin to be a terminal; redirected or piped stdin fails with a short diagnostic.
+
 ## Roadmap direction
 
 Implementation order is tracked in `docs/roadmap.md`.

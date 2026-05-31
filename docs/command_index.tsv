@@ -12,6 +12,10 @@ env	00	envp,stdout,write-syscall,initial-stack,option-subset
 printenv	00	envp,stdout,argv,string-scan,write-syscall,option-subset
 sleep	00	nanosleep-syscall,argv,decimal-parse,timespec
 usleep	00	nanosleep-syscall,argv,decimal-parse,timespec
+hostname	00	utsname,uname-syscall,stdout,option-subset
+whoami	00	geteuid-syscall,passwd-file,account-lookup,stdout,option-subset
+tty	00	ioctl-syscall,procfs,readlink-syscall,stdin,tty-detection,option-subset
+ttysize	00	ioctl-syscall,terminal-size,stdin,decimal-format
 cat	01	stdin,stdout,file-read,buffer-loop,open-read-write-close
 head	01	stdin,stdout,file-read,line-counting,buffer-loop
 wc	01	stdin,stdout,file-read,byte-line-word-counting

@@ -15,8 +15,9 @@ The first utilities are intentionally small. They demonstrate:
 - reading `argc` and `argv` from the initial stack
 - straightforward string scanning in assembly
 - fixed table output and terminal escape sequences
-- simple kernel information queries with `uname(2)` and `getcwd(2)`
+- simple kernel information queries with `uname(2)`, `getcwd(2)`, and `ioctl(2)`
 - environment pointer (`envp`) traversal from the initial stack
+- simple account-name lookup by scanning `/etc/passwd`
 - unsigned decimal parsing and `nanosleep(2)` timespec setup
 - simple shell-based regression tests
 
@@ -39,6 +40,10 @@ Educational clarity is more important than cleverness, size, or speed.
 | `printenv` | 00 | ✅ | prints all environment entries or selected variable values |
 | `sleep` | 00 | ✅ | sleeps for one unsigned decimal seconds operand |
 | `usleep` | 00 | ✅ | sleeps for one unsigned decimal microseconds operand |
+| `hostname` | 00 | ✅ | prints the kernel node name from `uname(2)` |
+| `whoami` | 00 | ✅ | prints the effective user name by scanning `/etc/passwd` for `geteuid(2)` |
+| `tty` | 00 | ✅ | checks stdin with `ioctl(TCGETS)` and prints its terminal path; supports silent `-s` |
+| `ttysize` | 00 | ✅ | prints terminal rows and columns from `ioctl(TIOCGWINSZ)` on stdin |
 
 Difficulty and topic metadata are tracked in `docs/command_index.tsv`; per-command teaching contracts are tracked in `docs/commands.md`. Source files stay flat under `src/` so commands remain easy to find by name.
 
@@ -72,6 +77,10 @@ build/env
 build/printenv
 build/sleep
 build/usleep
+build/hostname
+build/whoami
+build/tty
+build/ttysize
 ```
 
 ## Test
@@ -112,6 +121,12 @@ env -i ASMUTILS_TEST_VALUE=abc ./build/printenv ASMUTILS_TEST_VALUE
 
 ./build/sleep 0
 ./build/usleep 1000
+
+./build/hostname
+./build/whoami
+./build/tty
+./build/tty -s
+./build/ttysize
 ```
 
 ## Project philosophy
