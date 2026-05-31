@@ -43,7 +43,7 @@ assert_stdout() {
 
 # The command index is intentionally small metadata, but it should stay present
 # for each binary built by this first-pass Makefile.
-for tool in true false echo yes pwd arch ascii clear uname; do
+for tool in true false echo yes pwd arch ascii clear uname env printenv sleep usleep; do
     awk -F '\t' -v tool="$tool" 'NR > 1 && $1 == tool { found = 1 } END { exit found ? 0 : 1 }' "$ROOT_DIR/docs/command_index.tsv" \
         || fail "docs/command_index.tsv is missing $tool"
 done
@@ -88,6 +88,39 @@ assert_stdout "$(pwd -P)" "$BUILD_DIR/pwd"
 assert_stdout "$(uname -m)" "$BUILD_DIR/arch"
 assert_stdout "$(uname)" "$BUILD_DIR/uname"
 assert_stdout "$(uname -m)" "$BUILD_DIR/uname" -m
+
+controlled_env_output=$(env -i ASMUTILS_TEST_VALUE=abc OTHER_VALUE=def "$BUILD_DIR/env")
+expected_controlled_env='ASMUTILS_TEST_VALUE=abc
+OTHER_VALUE=def'
+[ "$controlled_env_output" = "$expected_controlled_env" ] || fail 'env did not print the controlled environment'
+
+assert_stdout "abc" env -i ASMUTILS_TEST_VALUE=abc "$BUILD_DIR/printenv" ASMUTILS_TEST_VALUE
+assert_stdout 'abc
+def' env -i ASMUTILS_TEST_VALUE=abc OTHER_VALUE=def "$BUILD_DIR/printenv" ASMUTILS_TEST_VALUE OTHER_VALUE
+assert_status 1 env -i "$BUILD_DIR/printenv" ASMUTILS_TEST_VALUE
+
+assert_status 0 "$BUILD_DIR/sleep" 0
+assert_status 0 "$BUILD_DIR/usleep" 0
+
+set +e
+sleep_stderr=$($BUILD_DIR/sleep nope 2>&1 >/tmp/asmutils-sleep-bad.out)
+sleep_status=$?
+set -e
+[ "$sleep_status" -eq 1 ] || fail 'sleep with a non-decimal operand should fail with status 1'
+case "$sleep_stderr" in
+    *"invalid seconds: nope"*) ;;
+    *) fail 'sleep did not explain the invalid operand' ;;
+esac
+
+set +e
+usleep_stderr=$($BUILD_DIR/usleep --help 2>&1 >/tmp/asmutils-usleep-help.out)
+usleep_status=$?
+set -e
+[ "$usleep_status" -eq 1 ] || fail 'usleep --help should fail with status 1 in this teaching version'
+case "$usleep_stderr" in
+    *"unsupported option: --help"*) ;;
+    *) fail 'usleep --help did not explain the unsupported option' ;;
+esac
 
 ascii_head=$($BUILD_DIR/ascii | sed -n '1,4p')
 expected_ascii_head='Dec Hex Chr

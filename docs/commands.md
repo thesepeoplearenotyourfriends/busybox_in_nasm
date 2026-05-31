@@ -117,6 +117,58 @@ This file records the teaching contract for each implemented command. The source
   - `./build/uname -a; echo $?`
 - **Known limitations:** reads only the `sysname` and `machine` fields from Linux utsname.
 
+### `env`
+
+- **Difficulty level:** 00 — primer / smoke-test command.
+- **Tags:** `envp`, `stdout`, `write-syscall`, `initial-stack`, `option-subset`.
+- **Implemented behavior:** with no operands, prints the current process environment as `NAME=VALUE` lines in the order supplied at process startup.
+- **Unsupported behavior:** options, clearing or editing the environment, `NAME=VALUE` assignments, and command execution under a modified environment are rejected.
+- **Syscalls used:** `write(2)` and `exit(2)`.
+- **Manual tests:**
+  - `env -i ASMUTILS_TEST_VALUE=abc ./build/env`
+  - `./build/env --help; echo $?`
+  - `./build/env NAME=VALUE; echo $?`
+- **Known limitations:** this is only the envp-printing half of a real `env`; command launching and environment mutation can be added after process creation is introduced.
+
+### `printenv`
+
+- **Difficulty level:** 00 — primer / smoke-test command.
+- **Tags:** `envp`, `stdout`, `argv`, `string-scan`, `write-syscall`, `option-subset`.
+- **Implemented behavior:** with no operands, prints every environment entry as `NAME=VALUE`; with `NAME` operands, prints the value for each matching variable and exits nonzero if any requested name is missing.
+- **Unsupported behavior:** options such as `--help`, `--version`, and GNU `-0` output are rejected.
+- **Syscalls used:** `write(2)` and `exit(2)`.
+- **Manual tests:**
+  - `env -i ASMUTILS_TEST_VALUE=abc ./build/printenv`
+  - `env -i ASMUTILS_TEST_VALUE=abc ./build/printenv ASMUTILS_TEST_VALUE`
+  - `env -i ./build/printenv ASMUTILS_TEST_VALUE; echo $?`
+- **Known limitations:** environment names are matched by a simple byte scan before the `=` separator; no locale or encoding behavior is involved.
+
+### `sleep`
+
+- **Difficulty level:** 00 — primer / smoke-test command.
+- **Tags:** `nanosleep-syscall`, `argv`, `decimal-parse`, `timespec`.
+- **Implemented behavior:** accepts exactly one unsigned decimal seconds operand and sleeps with `nanosleep(2)`.
+- **Unsupported behavior:** fractional values, suffixes such as `m` / `h` / `d`, multiple operands, options, signal-aware restart loops, and parse overflow diagnostics are not implemented.
+- **Syscalls used:** `nanosleep(2)`, `write(2)`, and `exit(2)`.
+- **Manual tests:**
+  - `./build/sleep 0; echo $?`
+  - `./build/sleep 1; echo $?`
+  - `./build/sleep nope; echo $?`
+- **Known limitations:** interrupted sleeps currently report failure instead of retrying the remaining timespec.
+
+### `usleep`
+
+- **Difficulty level:** 00 — primer / smoke-test command.
+- **Tags:** `nanosleep-syscall`, `argv`, `decimal-parse`, `timespec`.
+- **Implemented behavior:** accepts exactly one unsigned decimal microseconds operand, converts it to a seconds/nanoseconds timespec, and sleeps with `nanosleep(2)`.
+- **Unsupported behavior:** options, multiple operands, suffixes, fractional values, signal-aware restart loops, and parse overflow diagnostics are not implemented.
+- **Syscalls used:** `nanosleep(2)`, `write(2)`, and `exit(2)`.
+- **Manual tests:**
+  - `./build/usleep 0; echo $?`
+  - `./build/usleep 1000; echo $?`
+  - `./build/usleep --help; echo $?`
+- **Known limitations:** interrupted sleeps currently report failure instead of retrying the remaining timespec.
+
 ## Roadmap direction
 
 Implementation order is tracked in `docs/roadmap.md`.
