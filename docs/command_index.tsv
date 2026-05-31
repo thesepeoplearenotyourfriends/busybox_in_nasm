@@ -8,6 +8,10 @@ arch	00	utsname,uname-syscall,stdout
 ascii	00	stdout,write-syscall,static-table
 clear	00	stdout,write-syscall,terminal-escape
 uname	00	utsname,uname-syscall,stdout,option-subset
+env	00	envp,stdout,write-syscall,initial-stack,option-subset
+printenv	00	envp,stdout,argv,string-scan,write-syscall,option-subset
+sleep	00	nanosleep-syscall,argv,decimal-parse,timespec
+usleep	00	nanosleep-syscall,argv,decimal-parse,timespec
 cat	01	stdin,stdout,file-read,buffer-loop,open-read-write-close
 head	01	stdin,stdout,file-read,line-counting,buffer-loop
 wc	01	stdin,stdout,file-read,byte-line-word-counting

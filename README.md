@@ -16,6 +16,8 @@ The first utilities are intentionally small. They demonstrate:
 - straightforward string scanning in assembly
 - fixed table output and terminal escape sequences
 - simple kernel information queries with `uname(2)` and `getcwd(2)`
+- environment pointer (`envp`) traversal from the initial stack
+- unsigned decimal parsing and `nanosleep(2)` timespec setup
 - simple shell-based regression tests
 
 Educational clarity is more important than cleverness, size, or speed.
@@ -33,6 +35,10 @@ Educational clarity is more important than cleverness, size, or speed.
 | `ascii` | 00 | ✅ | prints a compact 7-bit ASCII reference table |
 | `clear` | 00 | ✅ | writes an ANSI/VT100 clear-screen sequence |
 | `uname` | 00 | ✅ | prints the kernel name by default; supports `-m` |
+| `env` | 00 | ✅ | prints the current environment; editing and command execution are not implemented |
+| `printenv` | 00 | ✅ | prints all environment entries or selected variable values |
+| `sleep` | 00 | ✅ | sleeps for one unsigned decimal seconds operand |
+| `usleep` | 00 | ✅ | sleeps for one unsigned decimal microseconds operand |
 
 Difficulty and topic metadata are tracked in `docs/command_index.tsv`; per-command teaching contracts are tracked in `docs/commands.md`. Source files stay flat under `src/` so commands remain easy to find by name.
 
@@ -62,6 +68,10 @@ build/arch
 build/ascii
 build/clear
 build/uname
+build/env
+build/printenv
+build/sleep
+build/usleep
 ```
 
 ## Test
@@ -96,6 +106,12 @@ timeout 1 ./build/yes assembly
 
 ./build/uname
 ./build/uname -m
+
+env -i ASMUTILS_TEST_VALUE=abc ./build/env
+env -i ASMUTILS_TEST_VALUE=abc ./build/printenv ASMUTILS_TEST_VALUE
+
+./build/sleep 0
+./build/usleep 1000
 ```
 
 ## Project philosophy

@@ -10,7 +10,7 @@ LD ?= ld
 SRC_DIR := src
 BUILD_DIR := build
 
-TOOLS := true false echo yes pwd arch ascii clear uname
+TOOLS := true false echo yes pwd arch ascii clear uname env printenv sleep usleep
 SOURCES := $(addprefix $(SRC_DIR)/,$(addsuffix .asm,$(TOOLS)))
 OBJECTS := $(addprefix $(BUILD_DIR)/,$(addsuffix .o,$(TOOLS)))
 BINARIES := $(addprefix $(BUILD_DIR)/,$(TOOLS))
