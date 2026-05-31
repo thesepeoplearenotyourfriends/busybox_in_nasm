@@ -182,6 +182,43 @@ This file records the teaching contract for each implemented command. The source
   - `./build/hostname --help; echo $?`
 - **Known limitations:** reads only the Linux utsname `nodename` field and does not call `sethostname(2)`.
 
+### `hostid`
+
+- **Difficulty level:** 00 — primer / smoke-test command.
+- **Tags:** `utsname`, `hostname-hash`, `stdout`, `hex-format`, `option-subset`.
+- **First-pass semantics:** with no operands, read the kernel `nodename` with `uname(2)`, compute a simple documented 32-bit FNV-1a hash of that name, and print eight lowercase hexadecimal digits.
+- **Unsupported behavior:** options, operands, libc `gethostid(3)`, `/etc/hostid`, DNS address lookups, and vendor-specific host ID policy are not implemented.
+- **Syscalls used:** `uname(2)`, `write(2)`, and `exit(2)`.
+- **Manual tests:**
+  - `./build/hostid`
+  - `./build/hostid --help; echo $?`
+- **Known limitations:** the output is a stable teaching identifier for the current kernel hostname, not a compatibility promise for GNU, BusyBox, or libc `hostid` output.
+
+### `logname`
+
+- **Difficulty level:** 00 — primer / smoke-test command.
+- **Tags:** `envp`, `login-name-policy`, `stdout`, `option-subset`.
+- **First-pass semantics:** with no operands, print the value of the `LOGNAME` environment variable when it is present and non-empty.
+- **Unsupported behavior:** options, operands, utmp/session lookup, controlling-terminal lookup, PAM/loginuid handling, and libc `getlogin(3)` are not implemented.
+- **Syscalls used:** `write(2)` and `exit(2)`.
+- **Manual tests:**
+  - `env LOGNAME=student ./build/logname`
+  - `env -i ./build/logname; echo $?`
+  - `./build/logname --help; echo $?`
+- **Known limitations:** this is intentionally environment-based, so it may disagree with real `logname` on systems where no login session exists or where `LOGNAME` has been edited.
+
+### `nproc`
+
+- **Difficulty level:** 00 — primer / smoke-test command.
+- **Tags:** `sched-affinity`, `cpu-count`, `bit-count`, `stdout`, `decimal-format`, `option-subset`.
+- **First-pass semantics:** with no operands, call `sched_getaffinity(2)` for the current process, count set bits in a fixed-size CPU mask, and print that count as decimal.
+- **Unsupported behavior:** options such as `--all`, `--ignore=N`, environment variables, libc `sysconf(3)`, CPU hotplug races, masks larger than the teaching buffer, and cgroup quota interpretation are not implemented.
+- **Syscalls used:** `sched_getaffinity(2)`, `write(2)`, and `exit(2)`.
+- **Manual tests:**
+  - `./build/nproc`
+  - `./build/nproc --help; echo $?`
+- **Known limitations:** reports the number of CPUs allowed by the process affinity mask, up to 1024 CPUs, rather than every online CPU or every CPU quota rule a full userland might consider.
+
 ### `whoami`
 
 - **Difficulty level:** 00 — primer / smoke-test command.

@@ -43,7 +43,7 @@ assert_stdout() {
 
 # The command index is intentionally small metadata, but it should stay present
 # for each binary built by this first-pass Makefile.
-for tool in true false echo yes pwd arch ascii clear uname env printenv sleep usleep hostname whoami tty ttysize; do
+for tool in true false echo yes pwd arch ascii clear uname env printenv sleep usleep hostname hostid logname nproc whoami tty ttysize; do
     awk -F '\t' -v tool="$tool" 'NR > 1 && $1 == tool { found = 1 } END { exit found ? 0 : 1 }' "$ROOT_DIR/docs/command_index.tsv" \
         || fail "docs/command_index.tsv is missing $tool"
 done
@@ -87,6 +87,16 @@ assert_stdout "$(pwd -P)" "$BUILD_DIR/pwd"
 
 assert_stdout "$(uname -m)" "$BUILD_DIR/arch"
 assert_stdout "$(uname -n)" "$BUILD_DIR/hostname"
+
+hostid_output=$("$BUILD_DIR/hostid")
+case "$hostid_output" in
+    [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]) ;;
+    *) fail "hostid did not print eight lowercase hexadecimal digits: $hostid_output" ;;
+esac
+
+assert_stdout "student" env LOGNAME=student "$BUILD_DIR/logname"
+assert_status 1 env -i "$BUILD_DIR/logname"
+assert_stdout "$(nproc)" "$BUILD_DIR/nproc"
 assert_stdout "$(id -un)" "$BUILD_DIR/whoami"
 assert_stdout "$(uname)" "$BUILD_DIR/uname"
 assert_stdout "$(uname -m)" "$BUILD_DIR/uname" -m
@@ -166,6 +176,36 @@ set -e
 case "$pwd_stderr" in
     *"unsupported option: --help"*) ;;
     *) fail 'pwd --help did not explain the unsupported option' ;;
+esac
+
+set +e
+hostid_stderr=$($BUILD_DIR/hostid --help 2>&1 >/tmp/asmutils-hostid-help.out)
+hostid_status=$?
+set -e
+[ "$hostid_status" -eq 1 ] || fail 'hostid --help should fail with status 1 in this teaching version'
+case "$hostid_stderr" in
+    *"unsupported option: --help"*) ;;
+    *) fail 'hostid --help did not explain the unsupported option' ;;
+esac
+
+set +e
+logname_stderr=$($BUILD_DIR/logname --help 2>&1 >/tmp/asmutils-logname-help.out)
+logname_status=$?
+set -e
+[ "$logname_status" -eq 1 ] || fail 'logname --help should fail with status 1 in this teaching version'
+case "$logname_stderr" in
+    *"unsupported option: --help"*) ;;
+    *) fail 'logname --help did not explain the unsupported option' ;;
+esac
+
+set +e
+nproc_stderr=$($BUILD_DIR/nproc --help 2>&1 >/tmp/asmutils-nproc-help.out)
+nproc_status=$?
+set -e
+[ "$nproc_status" -eq 1 ] || fail 'nproc --help should fail with status 1 in this teaching version'
+case "$nproc_stderr" in
+    *"unsupported option: --help"*) ;;
+    *) fail 'nproc --help did not explain the unsupported option' ;;
 esac
 
 set +e
