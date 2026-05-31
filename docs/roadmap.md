@@ -41,7 +41,7 @@ printenv, pwd, sleep, true, tty, ttysize, uname, usleep, whoami, yes
 Current diagnostic order:
 
 ```text
-true -> false -> echo -> yes -> pwd -> arch -> ascii -> clear -> uname -> env -> printenv -> sleep -> usleep -> hostname -> whoami -> tty -> ttysize
+true -> false -> echo -> yes -> pwd -> arch -> ascii -> clear -> uname -> env -> printenv -> sleep -> usleep -> hostname -> hostid -> logname -> nproc -> whoami -> tty -> ttysize
 ```
 
 ### Level 01: beginner streams, strings, and simple file I/O

@@ -13,6 +13,9 @@ printenv	00	envp,stdout,argv,string-scan,write-syscall,option-subset
 sleep	00	nanosleep-syscall,argv,decimal-parse,timespec
 usleep	00	nanosleep-syscall,argv,decimal-parse,timespec
 hostname	00	utsname,uname-syscall,stdout,option-subset
+hostid	00	utsname,hostname-hash,stdout,hex-format,option-subset
+logname	00	envp,login-name-policy,stdout,option-subset
+nproc	00	sched-affinity,cpu-count,bit-count,stdout,decimal-format,option-subset
 whoami	00	geteuid-syscall,passwd-file,account-lookup,stdout,option-subset
 tty	00	ioctl-syscall,procfs,readlink-syscall,stdin,tty-detection,option-subset
 ttysize	00	ioctl-syscall,terminal-size,stdin,decimal-format
