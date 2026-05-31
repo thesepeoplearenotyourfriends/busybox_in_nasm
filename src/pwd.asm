@@ -3,7 +3,7 @@
 ; Behavior implemented:
 ;   - With no operands, print the current working directory followed by a newline.
 ;
-; Behavior missing:
+; Unsupported behavior:
 ;   - Logical-vs-physical options such as -L and -P are not implemented.
 ;   - --help and --version are not implemented.
 ;   - Extra operands are rejected instead of being ignored.
@@ -18,6 +18,10 @@
 ;   - Unsupported options and unexpected operands print clear stderr messages
 ;     and exit with status 1.
 ;   - getcwd or write failures exit with status 1 after a short diagnostic.
+;
+; Exit behavior:
+;   - Exits 0 after printing the working directory and newline; exits 1 for
+;     unsupported input or syscall/write failure.
 ;
 ; Compatibility notes:
 ;   - This version intentionally teaches the raw getcwd(2) syscall. It therefore
