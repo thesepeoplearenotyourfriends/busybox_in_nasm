@@ -41,11 +41,11 @@ assert_stdout() {
 }
 
 
-# The applet index is intentionally small metadata, but it should stay present
+# The command index is intentionally small metadata, but it should stay present
 # for each binary built by this first-pass Makefile.
 for tool in true false echo yes pwd arch ascii clear uname; do
-    awk -F '\t' -v tool="$tool" 'NR > 1 && $1 == tool { found = 1 } END { exit found ? 0 : 1 }' "$ROOT_DIR/docs/applet_index.tsv" \
-        || fail "docs/applet_index.tsv is missing $tool"
+    awk -F '\t' -v tool="$tool" 'NR > 1 && $1 == tool { found = 1 } END { exit found ? 0 : 1 }' "$ROOT_DIR/docs/command_index.tsv" \
+        || fail "docs/command_index.tsv is missing $tool"
 done
 
 assert_status 0 "$BUILD_DIR/true"

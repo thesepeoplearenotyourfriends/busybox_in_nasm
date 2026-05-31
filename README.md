@@ -14,6 +14,8 @@ The first utilities are intentionally small. They demonstrate:
 - simple file descriptor I/O with `write(2)`
 - reading `argc` and `argv` from the initial stack
 - straightforward string scanning in assembly
+- fixed table output and terminal escape sequences
+- simple kernel information queries with `uname(2)` and `getcwd(2)`
 - simple shell-based regression tests
 
 Educational clarity is more important than cleverness, size, or speed.
@@ -27,6 +29,10 @@ Educational clarity is more important than cleverness, size, or speed.
 | `echo` | 00 | implemented | supports plain operands and `-n`; unsupported option handling is intentionally explicit |
 | `yes` | 00 | implemented | writes `y` repeatedly, or the provided operands joined by spaces |
 | `pwd` | 00 | implemented | prints the kernel current working directory with `getcwd(2)` |
+| `arch` | 00 | implemented | prints the machine hardware name from `uname(2)` |
+| `ascii` | 00 | implemented | prints a compact 7-bit ASCII reference table |
+| `clear` | 00 | implemented | writes an ANSI/VT100 clear-screen sequence |
+| `uname` | 00 | implemented | prints the kernel name by default; supports `-m` |
 
 Difficulty and topic metadata are tracked in `docs/command_index.tsv`; per-command teaching contracts are tracked in `docs/commands.md`. Source files stay flat under `src/` so commands remain easy to find by name.
 
@@ -52,6 +58,10 @@ build/false
 build/echo
 build/yes
 build/pwd
+build/arch
+build/ascii
+build/clear
+build/uname
 ```
 
 ## Test
@@ -77,6 +87,15 @@ echo $?
 timeout 1 ./build/yes assembly
 
 ./build/pwd
+
+./build/arch
+
+./build/ascii | sed -n '1,5p'
+
+./build/clear
+
+./build/uname
+./build/uname -m
 ```
 
 ## Project philosophy
