@@ -43,7 +43,7 @@ assert_stdout() {
 
 # The command index is intentionally small metadata, but it should stay present
 # for each binary built by this first-pass Makefile.
-for tool in true false echo yes pwd arch ascii clear uname env printenv sleep usleep hostname hostid logname nproc whoami tty ttysize; do
+for tool in true false echo yes pwd arch ascii clear uname env printenv sleep usleep hostname hostid logname nproc whoami tty ttysize cat head basename; do
     awk -F '\t' -v tool="$tool" 'NR > 1 && $1 == tool { found = 1 } END { exit found ? 0 : 1 }' "$ROOT_DIR/docs/command_index.tsv" \
         || fail "docs/command_index.tsv is missing $tool"
 done
@@ -84,6 +84,27 @@ assembly'
 [ "$yes_output" = "$expected_yes" ] || fail 'yes did not repeat the provided operand'
 
 assert_stdout "$(pwd -P)" "$BUILD_DIR/pwd"
+
+cat_input=/tmp/asmutils-cat.input
+cat_output=/tmp/asmutils-cat.output
+printf 'alpha\nbeta\ngamma\n' >"$cat_input"
+"$BUILD_DIR/cat" "$cat_input" - >"$cat_output" <<'CAT_STDIN'
+delta
+epsilon
+CAT_STDIN
+printf 'alpha\nbeta\ngamma\ndelta\nepsilon\n' >/tmp/asmutils-cat.expected
+cmp -s "$cat_output" /tmp/asmutils-cat.expected || fail 'cat did not copy file and stdin operands in order'
+
+head_input=/tmp/asmutils-head.input
+awk 'BEGIN { for (i = 1; i <= 12; i++) printf "line %d\n", i }' >"$head_input"
+head_output=$("$BUILD_DIR/head" "$head_input")
+expected_head=$(sed -n '1,10p' "$head_input")
+[ "$head_output" = "$expected_head" ] || fail 'head did not print the first ten lines'
+
+assert_stdout "bin" "$BUILD_DIR/basename" /usr/bin/
+assert_stdout "/" "$BUILD_DIR/basename" ///
+assert_stdout "plain" "$BUILD_DIR/basename" plain
+assert_status 1 "$BUILD_DIR/basename"
 
 assert_stdout "$(uname -m)" "$BUILD_DIR/arch"
 assert_stdout "$(uname -n)" "$BUILD_DIR/hostname"

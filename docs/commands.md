@@ -256,6 +256,46 @@ This file records the teaching contract for each implemented command. The source
   - `./build/ttysize </dev/null; echo $?`
 - **Known limitations:** requires stdin to be a terminal; redirected or piped stdin fails with a short diagnostic.
 
+
+### `cat`
+
+- **Difficulty level:** 01 — beginner streams, strings, and simple file I/O.
+- **Tags:** `stdin`, `stdout`, `file-read`, `buffer-loop`, `open-read-write-close`.
+- **Implemented behavior:** with no operands, copies stdin to stdout; with file operands, copies each file in order; an operand of `-` copies stdin at that point in the operand list.
+- **Unsupported behavior:** display options such as `-n`, `-b`, `-s`, `-A`, `-v`, `-e`, and `-t`, long options, and errno-specific diagnostics are not implemented.
+- **Syscalls used:** `open(2)`, `read(2)`, `write(2)`, `close(2)`, and `exit(2)`.
+- **Manual tests:**
+  - `printf 'one\ntwo\n' | ./build/cat`
+  - `./build/cat README.md | cmp -s README.md -`
+  - `./build/cat missing-file; echo $?`
+- **Known limitations:** this is the plain copying subset only; it treats read/write failures as command failure but intentionally avoids an errno-to-string table for now.
+
+### `head`
+
+- **Difficulty level:** 01 — beginner streams, strings, and simple file I/O.
+- **Tags:** `stdin`, `stdout`, `file-read`, `line-counting`, `buffer-loop`.
+- **Implemented behavior:** prints the first 10 newline-terminated lines from stdin or from one named file.
+- **Unsupported behavior:** options such as `-n`, byte counts, multiple-file headers, quiet/verbose modes, long options, and errno-specific diagnostics are not implemented.
+- **Syscalls used:** `open(2)`, `read(2)`, `write(2)`, `close(2)`, and `exit(2)`.
+- **Manual tests:**
+  - `seq 12 | ./build/head`
+  - `./build/head README.md`
+  - `./build/head README.md docs/roadmap.md; echo $?`
+- **Known limitations:** only the default 10-line subset is implemented, and at most one file operand is accepted.
+
+### `basename`
+
+- **Difficulty level:** 01 — beginner streams, strings, and simple file I/O.
+- **Tags:** `path`, `string-scan`.
+- **Implemented behavior:** accepts one pathname operand, removes trailing slash bytes, prints the bytes after the final slash, and prints `/` for operands made only of slashes.
+- **Unsupported behavior:** suffix removal, `-a`, `-s`, `-z`, `--help`, and `--version` are not implemented.
+- **Syscalls used:** `write(2)` and `exit(2)`.
+- **Manual tests:**
+  - `./build/basename /usr/bin/`
+  - `./build/basename ///`
+  - `./build/basename; echo $?`
+- **Known limitations:** pathnames are treated as raw byte strings; no filesystem lookup, locale handling, or suffix processing is attempted.
+
 ## Roadmap direction
 
 Implementation order is tracked in `docs/roadmap.md`.
