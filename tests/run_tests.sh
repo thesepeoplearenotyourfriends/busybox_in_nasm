@@ -43,7 +43,7 @@ assert_stdout() {
 
 # The command index is intentionally small metadata, but it should stay present
 # for each binary built by this first-pass Makefile.
-for tool in true false echo yes pwd arch ascii clear uname env printenv sleep usleep hostname hostid logname nproc whoami tty ttysize cat head basename; do
+for tool in true false echo yes pwd arch ascii clear uname env printenv sleep usleep hostname hostid logname nproc whoami tty ttysize cat head wc tee rev basename; do
     awk -F '\t' -v tool="$tool" 'NR > 1 && $1 == tool { found = 1 } END { exit found ? 0 : 1 }' "$ROOT_DIR/docs/command_index.tsv" \
         || fail "docs/command_index.tsv is missing $tool"
 done
@@ -100,6 +100,37 @@ awk 'BEGIN { for (i = 1; i <= 12; i++) printf "line %d\n", i }' >"$head_input"
 head_output=$("$BUILD_DIR/head" "$head_input")
 expected_head=$(sed -n '1,10p' "$head_input")
 [ "$head_output" = "$expected_head" ] || fail 'head did not print the first ten lines'
+
+wc_one=/tmp/asmutils-wc-one.input
+wc_two=/tmp/asmutils-wc-two.input
+printf 'one two\nthree\n' >"$wc_one"
+printf 'x y z' >"$wc_two"
+assert_stdout "2 3 14" "$BUILD_DIR/wc" <"$wc_one"
+expected_wc_files="2 3 14 $wc_one
+0 3 5 $wc_two
+2 6 19 total"
+actual_wc_files=$("$BUILD_DIR/wc" "$wc_one" "$wc_two")
+[ "$actual_wc_files" = "$expected_wc_files" ] || fail 'wc did not print file counts and total'
+
+tee_one=/tmp/asmutils-tee-one.output
+tee_two=/tmp/asmutils-tee-two.output
+rm -f "$tee_one" "$tee_two"
+tee_stdout=$(printf 'tee line\n' | "$BUILD_DIR/tee" "$tee_one" "$tee_two")
+[ "$tee_stdout" = 'tee line' ] || fail 'tee did not copy stdin to stdout'
+printf 'tee line\n' >/tmp/asmutils-tee.expected
+cmp -s "$tee_one" /tmp/asmutils-tee.expected || fail 'tee did not write first file'
+cmp -s "$tee_two" /tmp/asmutils-tee.expected || fail 'tee did not write second file'
+printf 'again\n' | "$BUILD_DIR/tee" -a "$tee_one" >/dev/null
+printf 'tee line\nagain\n' >/tmp/asmutils-tee-append.expected
+cmp -s "$tee_one" /tmp/asmutils-tee-append.expected || fail 'tee -a did not append'
+
+rev_input=/tmp/asmutils-rev.input
+printf 'abc\ndef\nno-newline' >"$rev_input"
+expected_rev='cba
+fed
+enilwen-on'
+actual_rev=$("$BUILD_DIR/rev" "$rev_input")
+[ "$actual_rev" = "$expected_rev" ] || fail 'rev did not reverse each line'
 
 assert_stdout "bin" "$BUILD_DIR/basename" /usr/bin/
 assert_stdout "/" "$BUILD_DIR/basename" ///

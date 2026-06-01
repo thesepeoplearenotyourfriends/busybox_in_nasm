@@ -14,7 +14,7 @@ The first utilities are intentionally small. They demonstrate:
 - simple file descriptor I/O with `read(2)` and `write(2)`
 - reading `argc` and `argv` from the initial stack
 - straightforward string scanning in assembly
-- reusable buffer loops for stdin/stdout and file input
+- reusable buffer loops for stdin/stdout, file input, and file output
 - fixed table output and terminal escape sequences
 - simple kernel information queries with `uname(2)`, `getcwd(2)`, and `ioctl(2)`
 - environment pointer (`envp`) traversal from the initial stack
@@ -52,6 +52,9 @@ Level 00 is complete — time for cake and confetti! 🎂🎊
 | `ttysize` | 00 | ✅ | prints terminal rows and columns from `ioctl(TIOCGWINSZ)` on stdin |
 | `cat` | 01 | ✅ | copies stdin or named files to stdout with a fixed buffer and write-all loop |
 | `head` | 01 | ✅ | prints the first 10 lines from stdin or one named file |
+| `wc` | 01 | ✅ | prints default line, word, and byte counts for stdin or one or more files |
+| `tee` | 01 | ✅ | copies stdin to stdout and to one or more files; supports simple `-a` append mode |
+| `rev` | 01 | ✅ | reverses each input line using a documented 4096-byte line buffer limit |
 | `basename` | 01 | ✅ | strips directory prefixes and trailing slashes from one pathname operand |
 
 Difficulty and topic metadata are tracked in `docs/command_index.tsv`; per-command teaching contracts are tracked in `docs/commands.md`. Source files stay flat under `src/` so commands remain easy to find by name.
@@ -95,6 +98,9 @@ build/tty
 build/ttysize
 build/cat
 build/head
+build/wc
+build/tee
+build/rev
 build/basename
 ```
 
@@ -148,6 +154,9 @@ env LOGNAME=student ./build/logname
 
 printf 'one\ntwo\n' | ./build/cat
 ./build/cat README.md | ./build/head
+printf 'one two\nthree\n' | ./build/wc
+printf 'save me\n' | ./build/tee /tmp/asmutils-tee-example
+printf 'abc\ndef\n' | ./build/rev
 ./build/basename /usr/bin/
 ```
 

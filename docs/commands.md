@@ -283,6 +283,45 @@ This file records the teaching contract for each implemented command. The source
   - `./build/head README.md docs/roadmap.md; echo $?`
 - **Known limitations:** only the default 10-line subset is implemented, and at most one file operand is accepted.
 
+### `wc`
+
+- **Difficulty level:** 01 — beginner streams, strings, and simple file I/O.
+- **Tags:** `stdin`, `stdout`, `file-read`, `byte-line-word-counting`.
+- **Implemented behavior:** with no operands, counts stdin; with file operands, prints default line, word, and byte counts for each file and prints a `total` line when more than one file operand was provided.
+- **Unsupported behavior:** count-selection options such as `-l`, `-w`, `-c`, `-m`, and `-L`, long options, exact GNU/BSD column spacing, the conventional `-` stdin operand, and errno-specific diagnostics are not implemented.
+- **Syscalls used:** `open(2)`, `read(2)`, `write(2)`, `close(2)`, and `exit(2)`.
+- **Manual tests:**
+  - `printf 'one two\nthree\n' | ./build/wc`
+  - `./build/wc README.md docs/commands.md`
+  - `./build/wc missing-file; echo $?`
+- **Known limitations:** words are separated by ASCII whitespace bytes only, counts are unsigned 64-bit values, and output uses simple `lines words bytes [name]` columns rather than compatibility spacing.
+
+### `tee`
+
+- **Difficulty level:** 01 — beginner streams, strings, and simple file I/O.
+- **Tags:** `stdin`, `stdout`, `file-write`, `buffer-loop`.
+- **Implemented behavior:** copies stdin to stdout and to each named output file; a leading `-a` appends to output files instead of truncating them.
+- **Unsupported behavior:** `-i`, long options, option clusters, more than 32 output files, and errno-specific diagnostics are not implemented.
+- **Syscalls used:** `open(2)`, `read(2)`, `write(2)`, `close(2)`, and `exit(2)`.
+- **Manual tests:**
+  - `printf 'save me\n' | ./build/tee /tmp/tee-one /tmp/tee-two`
+  - `printf 'again\n' | ./build/tee -a /tmp/tee-one`
+  - `./build/tee --help; echo $?`
+- **Known limitations:** this version opens all output files before copying stdin, stops on the first open failure, and uses a fixed descriptor table to keep the assembly readable.
+
+### `rev`
+
+- **Difficulty level:** 01 — beginner streams, strings, and simple file I/O.
+- **Tags:** `stdin`, `stdout`, `string-scan`, `line-buffer`.
+- **Implemented behavior:** reverses each line from stdin or from file operands in order; a `-` operand reads stdin at that point.
+- **Unsupported behavior:** options, Unicode grapheme-aware reversal, dynamically allocated long-line handling, and errno-specific diagnostics are not implemented.
+- **Syscalls used:** `open(2)`, `read(2)`, `write(2)`, `close(2)`, and `exit(2)`.
+- **Manual tests:**
+  - `printf 'abc\ndef\n' | ./build/rev`
+  - `./build/rev README.md | ./build/head`
+  - `python3 -c "print('x' * 4097)" | ./build/rev; echo $?`
+- **Known limitations:** lines are buffered before reversal and are limited to 4096 bytes including a trailing newline; bytes are reversed, not characters or grapheme clusters.
+
 ### `basename`
 
 - **Difficulty level:** 01 — beginner streams, strings, and simple file I/O.
