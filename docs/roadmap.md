@@ -41,7 +41,7 @@ printenv, pwd, sleep, true, tty, ttysize, uname, usleep, whoami, yes
 Current diagnostic order:
 
 ```text
-true -> false -> echo -> yes -> pwd -> arch -> ascii -> clear -> uname -> env -> printenv -> sleep -> usleep -> hostname -> hostid -> logname -> nproc -> whoami -> tty -> ttysize -> cat -> head -> basename
+true -> false -> echo -> yes -> pwd -> arch -> ascii -> clear -> uname -> env -> printenv -> sleep -> usleep -> hostname -> hostid -> logname -> nproc -> whoami -> tty -> ttysize -> cat -> head -> wc -> tee -> rev -> basename
 ```
 
 ### Level 01: beginner streams, strings, and simple file I/O
@@ -56,12 +56,12 @@ link, mkdir, nl, paste, rev, rmdir, seq, strings, sync, tac, tee, touch,
 tr, unexpand, uniq, unix2dos, unlink, wc, which
 ```
 
-First Level 01 progress: `cat`, `head`, and `basename` are implemented.
+First Level 01 progress: `cat`, `head`, `wc`, `tee`, `rev`, and `basename` are implemented.
 
 Good remaining early targets after `pwd` and `cat`:
 
 ```text
-wc, tee, rev, dirname, which, seq, touch, mkdir, rmdir
+dirname, which, seq, touch, mkdir, rmdir
 ```
 
 ### Level 02: lower-intermediate utilities
