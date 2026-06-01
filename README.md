@@ -11,9 +11,10 @@ The first utilities are intentionally small. They demonstrate:
 - process entry at `_start` without a C runtime
 - Linux x86_64 system calls
 - process exit status
-- simple file descriptor I/O with `write(2)`
+- simple file descriptor I/O with `read(2)` and `write(2)`
 - reading `argc` and `argv` from the initial stack
 - straightforward string scanning in assembly
+- reusable buffer loops for stdin/stdout and file input
 - fixed table output and terminal escape sequences
 - simple kernel information queries with `uname(2)`, `getcwd(2)`, and `ioctl(2)`
 - environment pointer (`envp`) traversal from the initial stack
@@ -49,6 +50,9 @@ Level 00 is complete — time for cake and confetti! 🎂🎊
 | `whoami` | 00 | ✅ | prints the effective user name by scanning `/etc/passwd` for `geteuid(2)` |
 | `tty` | 00 | ✅ | checks stdin with `ioctl(TCGETS)` and prints its terminal path; supports silent `-s` |
 | `ttysize` | 00 | ✅ | prints terminal rows and columns from `ioctl(TIOCGWINSZ)` on stdin |
+| `cat` | 01 | ✅ | copies stdin or named files to stdout with a fixed buffer and write-all loop |
+| `head` | 01 | ✅ | prints the first 10 lines from stdin or one named file |
+| `basename` | 01 | ✅ | strips directory prefixes and trailing slashes from one pathname operand |
 
 Difficulty and topic metadata are tracked in `docs/command_index.tsv`; per-command teaching contracts are tracked in `docs/commands.md`. Source files stay flat under `src/` so commands remain easy to find by name.
 
@@ -89,6 +93,9 @@ build/nproc
 build/whoami
 build/tty
 build/ttysize
+build/cat
+build/head
+build/basename
 ```
 
 ## Test
@@ -138,6 +145,10 @@ env LOGNAME=student ./build/logname
 ./build/tty
 ./build/tty -s
 ./build/ttysize
+
+printf 'one\ntwo\n' | ./build/cat
+./build/cat README.md | ./build/head
+./build/basename /usr/bin/
 ```
 
 ## Project philosophy
