@@ -335,6 +335,59 @@ This file records the teaching contract for each implemented command. The source
   - `./build/basename; echo $?`
 - **Known limitations:** pathnames are treated as raw byte strings; no filesystem lookup, locale handling, or suffix processing is attempted.
 
+
+### `dirname`
+
+- **Difficulty level:** 01 — beginner streams, strings, and simple file I/O.
+- **Tags:** `path`, `string-scan`.
+- **Implemented behavior:** accepts one pathname operand, removes trailing slash bytes, prints the directory portion, prints `/` for operands made only of slashes, and prints `.` when there is no directory portion.
+- **Unsupported behavior:** `-z`, `--help`, `--version`, and multiple operands are not implemented.
+- **Syscalls used:** `write(2)` and `exit(2)`.
+- **Manual tests:**
+  - `./build/dirname /usr/bin/`
+  - `./build/dirname ///`
+  - `./build/dirname plain`
+- **Known limitations:** pathnames are treated as raw byte strings; no filesystem lookup, locale behavior, or NUL-separated output is attempted.
+
+### `which`
+
+- **Difficulty level:** 01 — beginner streams, strings, and simple file I/O.
+- **Tags:** `path-search`, `envp`, `access-syscall`, `string-scan`.
+- **Implemented behavior:** searches `PATH` for each command operand, prints the first executable match, and tests operands containing `/` directly with `access(X_OK)`.
+- **Unsupported behavior:** options such as `-a`, shell aliases/functions/builtins, hashed command tables, detailed permission diagnostics, `--help`, and `--version` are not implemented.
+- **Syscalls used:** `access(2)`, `write(2)`, and `exit(2)`.
+- **Manual tests:**
+  - `PATH=/bin:/usr/bin ./build/which sh`
+  - `./build/which ./build/which`
+  - `PATH=/tmp ./build/which definitely-missing; echo $?`
+- **Known limitations:** empty `PATH` components are printed as explicit `./name` candidates, candidates longer than the fixed 4096-byte teaching buffer are skipped, and this utility does not model shell-specific command lookup.
+
+### `seq`
+
+- **Difficulty level:** 01 — beginner streams, strings, and simple file I/O.
+- **Tags:** `stdout`, `argv`, `decimal-parse`, `decimal-format`, `simple-loop`.
+- **Implemented behavior:** supports `seq LAST`, `seq FIRST LAST`, and `seq FIRST INCREMENT LAST` for increasing unsigned decimal integer sequences.
+- **Unsupported behavior:** negative numbers, floating point, custom separators, equal-width output, printf-style formats, options, and overflow diagnostics are not implemented.
+- **Syscalls used:** `write(2)` and `exit(2)`.
+- **Manual tests:**
+  - `./build/seq 3`
+  - `./build/seq 2 2 6`
+  - `./build/seq 1 0 3; echo $?`
+- **Known limitations:** this is an unsigned-integer teaching subset; if incrementing would wrap an unsigned 64-bit value, output stops rather than reporting a detailed overflow error.
+
+### `touch`
+
+- **Difficulty level:** 01 — beginner streams, strings, and simple file I/O.
+- **Tags:** `file-create`, `timestamp`, `utimensat-syscall`, `open-close`.
+- **Implemented behavior:** accepts one or more file operands, updates timestamps on existing files with `utimensat(2)`, and creates missing files with `open(O_CREAT)`.
+- **Unsupported behavior:** options such as `-a`, `-c`, `-d`, `-m`, `-r`, `-t`, long options, custom timestamps, reference files, no-create mode, and errno-specific diagnostics are not implemented.
+- **Syscalls used:** `utimensat(2)`, `open(2)`, `close(2)`, `write(2)`, and `exit(2)`.
+- **Manual tests:**
+  - `rm -f /tmp/asm-touch && ./build/touch /tmp/asm-touch && test -f /tmp/asm-touch`
+  - `./build/touch /tmp/asm-touch`
+  - `./build/touch; echo $?`
+- **Known limitations:** `touch` only falls back to file creation when `utimensat(2)` reports `ENOENT`, and it relies on the process umask to apply normal permission masking to newly created files.
+
 ## Roadmap direction
 
 Implementation order is tracked in `docs/roadmap.md`.

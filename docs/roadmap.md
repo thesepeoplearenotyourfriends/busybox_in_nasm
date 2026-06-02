@@ -41,7 +41,7 @@ printenv, pwd, sleep, true, tty, ttysize, uname, usleep, whoami, yes
 Current diagnostic order:
 
 ```text
-true -> false -> echo -> yes -> pwd -> arch -> ascii -> clear -> uname -> env -> printenv -> sleep -> usleep -> hostname -> hostid -> logname -> nproc -> whoami -> tty -> ttysize -> cat -> head -> wc -> tee -> rev -> basename
+true -> false -> echo -> yes -> pwd -> arch -> ascii -> clear -> uname -> env -> printenv -> sleep -> usleep -> hostname -> hostid -> logname -> nproc -> whoami -> tty -> ttysize -> cat -> head -> wc -> tee -> rev -> basename -> dirname -> which -> seq -> touch
 ```
 
 ### Level 01: beginner streams, strings, and simple file I/O
@@ -56,12 +56,12 @@ link, mkdir, nl, paste, rev, rmdir, seq, strings, sync, tac, tee, touch,
 tr, unexpand, uniq, unix2dos, unlink, wc, which
 ```
 
-First Level 01 progress: `cat`, `head`, `wc`, `tee`, `rev`, and `basename` are implemented.
+First Level 01 progress: `cat`, `head`, `wc`, `tee`, `rev`, `basename`, `dirname`, `which`, `seq`, and `touch` are implemented.
 
 Good remaining early targets after `pwd` and `cat`:
 
 ```text
-dirname, which, seq, touch, mkdir, rmdir
+mkdir, rmdir, cut, unlink, ln
 ```
 
 ### Level 02: lower-intermediate utilities
@@ -156,8 +156,8 @@ Examples include `ash`, `awk`, `bc`, `dc`, `ed`, `hexedit`, `hush`, `mim`, `sed`
 
 1. **Absolute basics:** `true`, `false`, `echo`, `yes`, `pwd`.
 2. **First file and stream tools:** `cat`, `head`, `wc`, `tee`, `rev`.
-3. **Path/string tools:** `basename`, `dirname`, `which`, `seq`, `cut`.
-4. **Tiny filesystem mutation:** `touch`, `mkdir`, `rmdir`, `unlink`, `ln`.
+3. **Path/string tools:** `basename`, `dirname`, `which`, `seq`, then `cut`.
+4. **Tiny filesystem mutation:** `touch` is implemented; continue with `mkdir`, `rmdir`, `unlink`, and `ln`.
 5. **First real filesystem inspection:** `stat`, `ls`, `readlink`, `realpath`, `du`.
 
 Only after these batches should the project move toward `grep`, `find`, `ps`, networking, compression, shells, package tools, init tools, or filesystem repair tools.
