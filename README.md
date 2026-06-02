@@ -59,6 +59,14 @@ Level 00 is complete — time for cake and confetti! 🎂🎊
 
 Difficulty and topic metadata are tracked in `docs/command_index.tsv`; per-command teaching contracts are tracked in `docs/commands.md`. Source files stay flat under `src/` so commands remain easy to find by name.
 
+## Companion notes
+
+Some commands have companion notes under [`notes/`](notes/).
+
+They are meant to be read with the corresponding `.asm` file open nearby, pointing out the structure, intent, low-level habits, and places where assembly can look stranger than it really is.
+
+The goal is approachable, not simplified-to-death: useful margin notes for someone who already wants to understand what the code is doing.
+
 ## Requirements
 
 - Linux on x86_64
