@@ -1,6 +1,6 @@
 # BusyBox-inspired NASM utilities
 
-This repository is an educational collection of familiar Linux command-line utilities written in NASM-compatible x86_64 assembly.
+This repository is a human-steered, GPT/Codex authored, educational collection of familiar Linux command-line utilities written in NASM-compatible x86_64 assembly.
 
 The project uses BusyBox as a practical roadmap for recognizable command names, but it is **not** a BusyBox clone and does not copy BusyBox implementation code. Each utility is built as its own standalone binary so the assembly stays readable and each program can teach one low-level idea at a time.
 
