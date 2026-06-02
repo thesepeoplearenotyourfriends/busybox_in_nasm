@@ -43,7 +43,7 @@ assert_stdout() {
 
 # The command index is intentionally small metadata, but it should stay present
 # for each binary built by this first-pass Makefile.
-for tool in true false echo yes pwd arch ascii clear uname env printenv sleep usleep hostname hostid logname nproc whoami tty ttysize cat head wc tee rev basename; do
+for tool in true false echo yes pwd arch ascii clear uname env printenv sleep usleep hostname hostid logname nproc whoami tty ttysize cat head wc tee rev basename dirname which seq touch; do
     awk -F '\t' -v tool="$tool" 'NR > 1 && $1 == tool { found = 1 } END { exit found ? 0 : 1 }' "$ROOT_DIR/docs/command_index.tsv" \
         || fail "docs/command_index.tsv is missing $tool"
 done
@@ -136,6 +136,38 @@ assert_stdout "bin" "$BUILD_DIR/basename" /usr/bin/
 assert_stdout "/" "$BUILD_DIR/basename" ///
 assert_stdout "plain" "$BUILD_DIR/basename" plain
 assert_status 1 "$BUILD_DIR/basename"
+
+assert_stdout "/usr" "$BUILD_DIR/dirname" /usr/bin/
+assert_stdout "/" "$BUILD_DIR/dirname" ///
+assert_stdout "." "$BUILD_DIR/dirname" plain
+assert_status 1 "$BUILD_DIR/dirname"
+
+expected_seq='1
+2
+3'
+actual_seq=$("$BUILD_DIR/seq" 3)
+[ "$actual_seq" = "$expected_seq" ] || fail 'seq LAST did not print 1 through LAST'
+expected_seq_step='2
+4
+6'
+actual_seq_step=$("$BUILD_DIR/seq" 2 2 6)
+[ "$actual_seq_step" = "$expected_seq_step" ] || fail 'seq FIRST INCREMENT LAST did not step correctly'
+assert_status 1 "$BUILD_DIR/seq" 1 0 3
+
+which_dir=/tmp/asmutils-which-bin
+rm -rf "$which_dir"
+mkdir -p "$which_dir"
+printf '#!/bin/sh\nexit 0\n' >"$which_dir/demo-tool"
+chmod +x "$which_dir/demo-tool"
+assert_stdout "$which_dir/demo-tool" env PATH="$which_dir" "$BUILD_DIR/which" demo-tool
+assert_stdout "$which_dir/demo-tool" "$BUILD_DIR/which" "$which_dir/demo-tool"
+assert_status 1 env PATH="$which_dir" "$BUILD_DIR/which" missing-tool
+
+touch_file=/tmp/asmutils-touch-file
+rm -f "$touch_file"
+assert_status 0 "$BUILD_DIR/touch" "$touch_file"
+[ -f "$touch_file" ] || fail 'touch did not create a missing file'
+assert_status 0 "$BUILD_DIR/touch" "$touch_file"
 
 assert_stdout "$(uname -m)" "$BUILD_DIR/arch"
 assert_stdout "$(uname -n)" "$BUILD_DIR/hostname"
