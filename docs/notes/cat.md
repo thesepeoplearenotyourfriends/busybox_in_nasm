@@ -1,24 +1,3 @@
-Yep. For this set, I would **not** do every command automatically. Some deserve notes because they teach a reusable assembly idea. Some are better left as “read the comments and move on.”
-
-My suggested keystone order:
-
-```text
-notes/00/
-  clear.md      # already done: raw write syscall, fixed bytes, exit status
-  ascii.md      # static data table; "a program can just be prebuilt bytes"
-  usleep.md     # argv parsing, decimal conversion, division, timespec layout
-  cat.md        # the big keystone: read loop, buffer, write-all, fd lifecycle
-  wc.md         # counters, byte scanning, state machine thinking
-  env.md        # walking envp / process startup stack
-  ttysize.md    # ioctl-ish boundary with the terminal
-```
-
-I’d probably do **`cat` next** as the first larger “this is becoming a real Unix tool” note. The source itself says its teaching focus is a fixed-size buffer, a read loop, a write-all helper for partial writes, and simple argv traversal.  That is prime notes material.
-
-Here’s the next draft.
-
----
-
 # Notes: `cat`
 
 `cat` is where this repo starts feeling less like “tiny syscall demos” and more like “a real Unix utility is being assembled from small pieces.”
