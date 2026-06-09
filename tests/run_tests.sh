@@ -43,7 +43,7 @@ assert_stdout() {
 
 # The command index is intentionally small metadata, but it should stay present
 # for each binary built by this first-pass Makefile.
-for tool in true false echo yes pwd arch ascii clear uname env printenv sleep usleep hostname hostid logname nproc whoami tty ttysize cat head wc tee rev basename dirname which seq touch; do
+for tool in true false echo yes pwd arch ascii clear uname env printenv sleep usleep hostname hostid logname nproc whoami tty ttysize cat head wc tee rev basename dirname which seq touch mkdir rmdir unlink ln; do
     awk -F '\t' -v tool="$tool" 'NR > 1 && $1 == tool { found = 1 } END { exit found ? 0 : 1 }' "$ROOT_DIR/docs/command_index.tsv" \
         || fail "docs/command_index.tsv is missing $tool"
 done
@@ -168,6 +168,40 @@ rm -f "$touch_file"
 assert_status 0 "$BUILD_DIR/touch" "$touch_file"
 [ -f "$touch_file" ] || fail 'touch did not create a missing file'
 assert_status 0 "$BUILD_DIR/touch" "$touch_file"
+
+mkdir_dir=/tmp/asmutils-mkdir-dir
+rm -rf "$mkdir_dir"
+assert_status 0 "$BUILD_DIR/mkdir" "$mkdir_dir"
+[ -d "$mkdir_dir" ] || fail 'mkdir did not create the requested directory'
+assert_status 1 "$BUILD_DIR/mkdir" "$mkdir_dir"
+
+rmdir_dir=/tmp/asmutils-rmdir-dir
+rm -rf "$rmdir_dir"
+mkdir -p "$rmdir_dir"
+assert_status 0 "$BUILD_DIR/rmdir" "$rmdir_dir"
+[ ! -e "$rmdir_dir" ] || fail 'rmdir did not remove the empty directory'
+assert_status 1 "$BUILD_DIR/rmdir" "$rmdir_dir"
+
+unlink_file=/tmp/asmutils-unlink-file
+printf 'remove me
+' >"$unlink_file"
+assert_status 0 "$BUILD_DIR/unlink" "$unlink_file"
+[ ! -e "$unlink_file" ] || fail 'unlink did not remove the file name'
+assert_status 1 "$BUILD_DIR/unlink" "$unlink_file"
+assert_status 1 "$BUILD_DIR/unlink" one two
+
+ln_source=/tmp/asmutils-ln-source
+ln_link=/tmp/asmutils-ln-link
+rm -f "$ln_source" "$ln_link"
+printf 'linked data
+' >"$ln_source"
+assert_status 0 "$BUILD_DIR/ln" "$ln_source" "$ln_link"
+cmp -s "$ln_source" "$ln_link" || fail 'ln did not create a readable hard link'
+source_inode=$(stat -c %i "$ln_source")
+link_inode=$(stat -c %i "$ln_link")
+[ "$source_inode" = "$link_inode" ] || fail 'ln result does not share the source inode'
+assert_status 1 "$BUILD_DIR/ln" "$ln_source"
+assert_status 1 "$BUILD_DIR/ln" "$ln_source" "$ln_link" extra
 
 assert_stdout "$(uname -m)" "$BUILD_DIR/arch"
 assert_stdout "$(uname -n)" "$BUILD_DIR/hostname"

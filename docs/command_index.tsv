@@ -29,3 +29,7 @@ dirname	01	path,string-scan
 which	01	path-search,envp,access-syscall,string-scan
 seq	01	stdout,argv,decimal-parse,decimal-format,simple-loop
 touch	01	file-create,timestamp,utimensat-syscall,open-close
+mkdir	01	directory-create,mkdir-syscall,mode-bits
+rmdir	01	directory-remove,rmdir-syscall
+unlink	01	file-remove,unlink-syscall,directory-entry
+ln	01	hard-link,link-syscall,directory-entry

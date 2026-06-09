@@ -10,7 +10,7 @@ LD ?= ld
 SRC_DIR := src
 BUILD_DIR := build
 
-TOOLS := true false echo yes pwd arch ascii clear uname env printenv sleep usleep hostname hostid logname nproc whoami tty ttysize cat head wc tee rev basename dirname which seq touch
+TOOLS := true false echo yes pwd arch ascii clear uname env printenv sleep usleep hostname hostid logname nproc whoami tty ttysize cat head wc tee rev basename dirname which seq touch mkdir rmdir unlink ln
 SOURCES := $(addprefix $(SRC_DIR)/,$(addsuffix .asm,$(TOOLS)))
 OBJECTS := $(addprefix $(BUILD_DIR)/,$(addsuffix .o,$(TOOLS)))
 BINARIES := $(addprefix $(BUILD_DIR)/,$(TOOLS))
