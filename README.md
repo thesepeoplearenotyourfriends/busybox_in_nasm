@@ -23,6 +23,7 @@ The first utilities are intentionally small. They demonstrate:
 - unsigned decimal parsing for delays and sequence generation
 - decimal output formatting for generated numbers
 - simple timestamp/file creation syscalls with `utimensat(2)` and `open(2)`
+- directory entry operations with `mkdir(2)`, `rmdir(2)`, `unlink(2)`, and `link(2)`
 - `nanosleep(2)` timespec setup
 - simple shell-based regression tests
 
@@ -64,6 +65,10 @@ Level 00 is complete — time for cake and confetti! 🎂🎊
 | `which` | 01 | ✅ | searches `PATH` for executable command names, or checks paths that contain `/` |
 | `seq` | 01 | ✅ | prints increasing unsigned decimal sequences for 1-, 2-, or 3-operand forms |
 | `touch` | 01 | ✅ | updates file timestamps with `utimensat(2)` and creates missing files with `open(2)` |
+| `mkdir` | 01 | ✅ | creates one or more directories with mode `0777` before umask filtering |
+| `rmdir` | 01 | ✅ | removes one or more empty directories |
+| `unlink` | 01 | ✅ | removes one pathname with `unlink(2)` |
+| `ln` | 01 | ✅ | creates a two-operand hard link with `link(2)` |
 
 Difficulty and topic metadata are tracked in `docs/command_index.tsv`; per-command teaching contracts are tracked in `docs/commands.md`. Source files stay flat under `src/` so commands remain easy to find by name.
 
@@ -122,6 +127,10 @@ build/dirname
 build/which
 build/seq
 build/touch
+build/mkdir
+build/rmdir
+build/unlink
+build/ln
 ```
 
 ## Test
@@ -184,6 +193,14 @@ PATH=/bin:/usr/bin ./build/which sh
 rm -f /tmp/asmutils-touch-example
 ./build/touch /tmp/asmutils-touch-example
 test -f /tmp/asmutils-touch-example
+rm -rf /tmp/asmutils-dir-example
+./build/mkdir /tmp/asmutils-dir-example
+./build/rmdir /tmp/asmutils-dir-example
+printf data >/tmp/asmutils-unlink-example
+./build/unlink /tmp/asmutils-unlink-example
+printf data >/tmp/asmutils-ln-source
+rm -f /tmp/asmutils-ln-link
+./build/ln /tmp/asmutils-ln-source /tmp/asmutils-ln-link
 ```
 
 ## Project philosophy

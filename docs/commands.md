@@ -388,6 +388,59 @@ This file records the teaching contract for each implemented command. The source
   - `./build/touch; echo $?`
 - **Known limitations:** `touch` only falls back to file creation when `utimensat(2)` reports `ENOENT`, and it relies on the process umask to apply normal permission masking to newly created files.
 
+
+### `mkdir`
+
+- **Difficulty level:** 01 — beginner streams, strings, and simple file I/O.
+- **Tags:** `directory-create`, `mkdir-syscall`, `mode-bits`.
+- **Implemented behavior:** accepts one or more directory operands and creates each with mode `0777`, subject to the process umask.
+- **Unsupported behavior:** options such as `-p`, `-m`, `--help`, and `--version`, parent creation, custom modes, verbose output, and errno-specific diagnostics are not implemented.
+- **Syscalls used:** `mkdir(2)`, `write(2)`, and `exit(2)`.
+- **Manual tests:**
+  - `rm -rf /tmp/asm-mkdir && ./build/mkdir /tmp/asm-mkdir && test -d /tmp/asm-mkdir`
+  - `./build/mkdir /tmp/asm-mkdir; echo $?`
+  - `./build/mkdir; echo $?`
+- **Known limitations:** this is the direct syscall subset only; it does not create missing parents and reports simple path-level failures rather than decoding errno values.
+
+### `rmdir`
+
+- **Difficulty level:** 01 — beginner streams, strings, and simple file I/O.
+- **Tags:** `directory-remove`, `rmdir-syscall`.
+- **Implemented behavior:** accepts one or more directory operands and removes each empty directory with `rmdir(2)`.
+- **Unsupported behavior:** options such as `-p`, `--ignore-fail-on-non-empty`, `--help`, and `--version`, recursive removal, and errno-specific diagnostics are not implemented.
+- **Syscalls used:** `rmdir(2)`, `write(2)`, and `exit(2)`.
+- **Manual tests:**
+  - `mkdir -p /tmp/asm-rmdir && ./build/rmdir /tmp/asm-rmdir && test ! -e /tmp/asm-rmdir`
+  - `mkdir -p /tmp/asm-rmdir/nonempty && touch /tmp/asm-rmdir/nonempty/file && ./build/rmdir /tmp/asm-rmdir/nonempty; echo $?`
+  - `./build/rmdir; echo $?`
+- **Known limitations:** only empty directories can be removed, matching the kernel syscall; non-empty directories are failures rather than prompts or recursive operations.
+
+### `unlink`
+
+- **Difficulty level:** 01 — beginner streams, strings, and simple file I/O.
+- **Tags:** `file-remove`, `unlink-syscall`, `directory-entry`.
+- **Implemented behavior:** accepts exactly one pathname operand and removes that directory entry with `unlink(2)`.
+- **Unsupported behavior:** multiple operands, options such as `--help` and `--version`, recursive behavior, and errno-specific diagnostics are not implemented.
+- **Syscalls used:** `unlink(2)`, `write(2)`, and `exit(2)`.
+- **Manual tests:**
+  - `printf data >/tmp/asm-unlink && ./build/unlink /tmp/asm-unlink && test ! -e /tmp/asm-unlink`
+  - `./build/unlink /tmp/missing-file; echo $?`
+  - `./build/unlink one two; echo $?`
+- **Known limitations:** directories are intentionally not removed by this command; use `rmdir` for empty directories in this teaching set.
+
+### `ln`
+
+- **Difficulty level:** 01 — beginner streams, strings, and simple file I/O.
+- **Tags:** `hard-link`, `link-syscall`, `directory-entry`.
+- **Implemented behavior:** accepts exactly two operands, `TARGET` and `LINK_NAME`, and creates a hard link with `link(2)`.
+- **Unsupported behavior:** symbolic links (`-s`), force/interactive/no-dereference options, directory-target forms, backup behavior, long options, and errno-specific diagnostics are not implemented.
+- **Syscalls used:** `link(2)`, `write(2)`, and `exit(2)`.
+- **Manual tests:**
+  - `printf data >/tmp/asm-ln-src && ./build/ln /tmp/asm-ln-src /tmp/asm-ln-dst && cmp -s /tmp/asm-ln-src /tmp/asm-ln-dst`
+  - `./build/ln /tmp/missing-target /tmp/asm-ln-dst; echo $?`
+  - `./build/ln only-one; echo $?`
+- **Known limitations:** this first pass teaches hard links only and relies on filesystem support for hard links; cross-device links, directories, and existing destinations fail through the kernel.
+
 ## Roadmap direction
 
 Implementation order is tracked in `docs/roadmap.md`.
