@@ -43,7 +43,7 @@ assert_stdout() {
 
 # The command index is intentionally small metadata, but it should stay present
 # for each binary built by this first-pass Makefile.
-for tool in true false echo yes pwd arch ascii clear uname env printenv sleep usleep hostname hostid logname nproc whoami tty ttysize cat head wc tee rev basename dirname which seq touch mkdir rmdir unlink ln; do
+for tool in true false echo yes pwd arch ascii clear uname env printenv sleep usleep hostname hostid logname nproc whoami tty ttysize cat head wc tee rev basename dirname which seq touch mkdir rmdir unlink ln readlink realpath stat; do
     awk -F '\t' -v tool="$tool" 'NR > 1 && $1 == tool { found = 1 } END { exit found ? 0 : 1 }' "$ROOT_DIR/docs/command_index.tsv" \
         || fail "docs/command_index.tsv is missing $tool"
 done
@@ -202,6 +202,36 @@ link_inode=$(stat -c %i "$ln_link")
 [ "$source_inode" = "$link_inode" ] || fail 'ln result does not share the source inode'
 assert_status 1 "$BUILD_DIR/ln" "$ln_source"
 assert_status 1 "$BUILD_DIR/ln" "$ln_source" "$ln_link" extra
+
+readlink_target=/tmp/asmutils-readlink-target
+readlink_link=/tmp/asmutils-readlink-link
+rm -f "$readlink_target" "$readlink_link"
+printf 'target data
+' >"$readlink_target"
+ln -s "$readlink_target" "$readlink_link"
+assert_stdout "$readlink_target" "$BUILD_DIR/readlink" "$readlink_link"
+assert_status 1 "$BUILD_DIR/readlink" "$readlink_target"
+assert_status 1 "$BUILD_DIR/readlink" "$readlink_link" extra
+
+realpath_dir=/tmp/asmutils-realpath-dir
+rm -rf "$realpath_dir"
+mkdir -p "$realpath_dir/sub"
+printf 'real data
+' >"$realpath_dir/sub/file"
+assert_stdout "$realpath_dir/sub/file" "$BUILD_DIR/realpath" "$realpath_dir/./sub/../sub/file"
+assert_stdout "$readlink_target" "$BUILD_DIR/realpath" "$readlink_link"
+assert_status 1 "$BUILD_DIR/realpath" "$realpath_dir/missing"
+
+stat_file=/tmp/asmutils-stat-file
+printf '1234567890
+' >"$stat_file"
+stat_output=$("$BUILD_DIR/stat" "$stat_file")
+expected_stat_prefix="Size: $(stat -c %s "$stat_file")
+Mode: $(printf "%d" "0$(stat -c %a "$stat_file")")
+Inode: $(stat -c %i "$stat_file")
+Links: $(stat -c %h "$stat_file")"
+[ "$stat_output" = "$expected_stat_prefix" ] || fail 'stat did not print the expected metadata summary'
+assert_status 1 "$BUILD_DIR/stat" "$stat_file" extra
 
 assert_stdout "$(uname -m)" "$BUILD_DIR/arch"
 assert_stdout "$(uname -n)" "$BUILD_DIR/hostname"

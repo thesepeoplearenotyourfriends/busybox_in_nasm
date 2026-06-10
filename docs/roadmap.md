@@ -41,7 +41,7 @@ printenv, pwd, sleep, true, tty, ttysize, uname, usleep, whoami, yes
 Current diagnostic order:
 
 ```text
-true -> false -> echo -> yes -> pwd -> arch -> ascii -> clear -> uname -> env -> printenv -> sleep -> usleep -> hostname -> hostid -> logname -> nproc -> whoami -> tty -> ttysize -> cat -> head -> wc -> tee -> rev -> basename -> dirname -> which -> seq -> touch -> mkdir -> rmdir -> unlink -> ln
+true -> false -> echo -> yes -> pwd -> arch -> ascii -> clear -> uname -> env -> printenv -> sleep -> usleep -> hostname -> hostid -> logname -> nproc -> whoami -> tty -> ttysize -> cat -> head -> wc -> tee -> rev -> basename -> dirname -> which -> seq -> touch -> mkdir -> rmdir -> unlink -> ln -> readlink -> realpath -> stat
 ```
 
 ### Level 01: beginner streams, strings, and simple file I/O
@@ -56,7 +56,7 @@ link, mkdir, nl, paste, rev, rmdir, seq, strings, sync, tac, tee, touch,
 tr, unexpand, uniq, unix2dos, unlink, wc, which
 ```
 
-First Level 01 progress: `cat`, `head`, `wc`, `tee`, `rev`, `basename`, `dirname`, `which`, `seq`, `touch`, `mkdir`, `rmdir`, `unlink`, and `ln` are implemented.
+First Level 01 progress: `cat`, `head`, `wc`, `tee`, `rev`, `basename`, `dirname`, `which`, `seq`, `touch`, `mkdir`, `rmdir`, `unlink`, and `ln` are implemented. Level 02 filesystem inspection has started with `readlink`, `realpath`, and `stat`.
 
 Good remaining early targets after `pwd` and `cat`:
 
@@ -158,7 +158,7 @@ Examples include `ash`, `awk`, `bc`, `dc`, `ed`, `hexedit`, `hush`, `mim`, `sed`
 2. **First file and stream tools:** `cat`, `head`, `wc`, `tee`, `rev`.
 3. **Path/string tools:** `basename`, `dirname`, `which`, `seq`, then `cut`.
 4. **Tiny filesystem mutation:** `touch` is implemented; continue with `mkdir`, `rmdir`, `unlink`, and `ln`.
-5. **First real filesystem inspection:** `stat`, `ls`, `readlink`, `realpath`, `du`.
+5. **First real filesystem inspection:** `readlink`, `realpath`, and `stat` are implemented; continue with `ls` and `du`.
 
 Only after these batches should the project move toward `grep`, `find`, `ps`, networking, compression, shells, package tools, init tools, or filesystem repair tools.
 
