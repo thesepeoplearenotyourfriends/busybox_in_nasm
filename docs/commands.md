@@ -441,6 +441,46 @@ This file records the teaching contract for each implemented command. The source
   - `./build/ln only-one; echo $?`
 - **Known limitations:** this first pass teaches hard links only and relies on filesystem support for hard links; cross-device links, directories, and existing destinations fail through the kernel.
 
+
+### `readlink`
+
+- **Difficulty level:** 02 — lower-intermediate utility.
+- **Tags:** `symlink`, `readlink-syscall`, `stdout`, `path-inspection`.
+- **Implemented behavior:** accepts exactly one pathname operand, reads it as a symbolic link with `readlink(2)`, and prints the raw target followed by a newline.
+- **Unsupported behavior:** options such as `-f`, `-n`, `--canonicalize`, `--help`, and `--version`, multiple operands, canonicalization, and custom output separators are not implemented.
+- **Syscalls used:** `readlink(2)`, `write(2)`, and `exit(2)`.
+- **Manual tests:**
+  - `ln -sf /tmp/target /tmp/asm-readlink && ./build/readlink /tmp/asm-readlink`
+  - `./build/readlink /tmp/not-a-symlink; echo $?`
+  - `./build/readlink one two; echo $?`
+- **Known limitations:** link targets that fill the fixed 4096-byte teaching buffer are treated as failures so the command does not silently print truncated targets.
+
+### `realpath`
+
+- **Difficulty level:** 02 — lower-intermediate utility.
+- **Tags:** `path-canonicalization`, `procfs`, `open-readlink-close`.
+- **Implemented behavior:** accepts exactly one existing pathname operand, opens it so the kernel resolves `.` / `..` and symlinks, reads `/proc/self/fd/N`, and prints the resolved absolute path followed by a newline.
+- **Unsupported behavior:** multiple operands, missing-path modes, relative output modes, options such as `-e`, `-m`, `--relative-to`, `--help`, and `--version`, and errno-specific diagnostics are not implemented.
+- **Syscalls used:** `open(2)`, `readlink(2)`, `close(2)`, `write(2)`, and `exit(2)`.
+- **Manual tests:**
+  - `./build/realpath ./src/../src/true.asm`
+  - `ln -sf /tmp/target /tmp/asm-realpath-link && ./build/realpath /tmp/asm-realpath-link`
+  - `./build/realpath /tmp/missing-realpath-input; echo $?`
+- **Known limitations:** this first pass requires the final path to exist and depends on procfs being mounted at `/proc`.
+
+### `stat`
+
+- **Difficulty level:** 02 — lower-intermediate utility.
+- **Tags:** `stat-syscall`, `file-metadata`, `decimal-format`.
+- **Implemented behavior:** accepts exactly one pathname operand and prints a compact teaching summary containing size, permission/special mode bits as a decimal integer, inode number, and link count.
+- **Unsupported behavior:** options such as `-c`, `-f`, `-L`, `--printf`, `--help`, and `--version`, timestamps, owner/group names, file type names, device numbers, filesystem statistics, and GNU-compatible formatting are not implemented.
+- **Syscalls used:** `stat(2)`, `write(2)`, and `exit(2)`.
+- **Manual tests:**
+  - `printf data >/tmp/asm-stat && ./build/stat /tmp/asm-stat`
+  - `./build/stat /tmp/missing-stat-input; echo $?`
+  - `./build/stat one two; echo $?`
+- **Known limitations:** this deliberately small output is for learning the `struct stat` fields and integer formatting, not for script compatibility with GNU or BusyBox `stat`.
+
 ## Roadmap direction
 
 Implementation order is tracked in `docs/roadmap.md`.
