@@ -442,6 +442,44 @@ This file records the teaching contract for each implemented command. The source
 - **Known limitations:** this first pass teaches hard links only and relies on filesystem support for hard links; cross-device links, directories, and existing destinations fail through the kernel.
 
 
+### `link`
+
+- **Difficulty level:** 01 — beginner streams, strings, and simple file I/O.
+- **Tags:** `hard-link`, `link-syscall`, `directory-entry`.
+- **Implemented behavior:** accepts exactly `FILE LINK_NAME` and creates a hard link with `link(2)`.
+- **Unsupported behavior:** options such as `--help` and `--version`, symbolic links, target-directory handling, and force/interactive behavior are not implemented.
+- **Syscalls used:** `link(2)`, `write(2)`, and `exit(2)`.
+- **Manual tests:**
+  - `printf 'data\n' >/tmp/link-source; ./build/link /tmp/link-source /tmp/link-copy`
+  - `stat -c '%i %h' /tmp/link-source /tmp/link-copy`
+  - `./build/link /tmp/link-source; echo $?`
+- **Known limitations:** this is intentionally a direct syscall lesson; user-friendly hard-link policy remains in `ln`.
+
+### `sync`
+
+- **Difficulty level:** 01 — beginner streams, strings, and simple file I/O.
+- **Tags:** `filesystem-sync`, `sync-syscall`, `no-args`.
+- **Implemented behavior:** accepts no operands and calls `sync(2)` to ask the kernel to schedule writeback of dirty filesystem data.
+- **Unsupported behavior:** file operands, `-d`, `-f`, `--help`, and `--version` are not implemented.
+- **Syscalls used:** `sync(2)`, `write(2)`, and `exit(2)`.
+- **Manual tests:**
+  - `./build/sync; echo $?`
+  - `./build/sync extra; echo $?`
+- **Known limitations:** Linux `sync(2)` is global and does not provide per-file diagnostics; this tiny utility exposes that simple shape directly.
+
+### `fsync`
+
+- **Difficulty level:** 01 — beginner streams, strings, and simple file I/O.
+- **Tags:** `filesystem-sync`, `fsync-syscall`, `open-close`.
+- **Implemented behavior:** accepts exactly one pathname, opens it read-only, calls `fsync(2)` on the resulting descriptor, and closes the descriptor.
+- **Unsupported behavior:** multiple operands, directory sync policy, `--help`, and `--version` are not implemented.
+- **Syscalls used:** `open(2)`, `fsync(2)`, `close(2)`, `write(2)`, and `exit(2)`.
+- **Manual tests:**
+  - `printf 'data\n' >/tmp/fsync-file; ./build/fsync /tmp/fsync-file; echo $?`
+  - `./build/fsync /tmp/missing-file; echo $?`
+  - `./build/fsync /tmp/fsync-file extra; echo $?`
+- **Known limitations:** this first pass reports only short failure messages and does not distinguish open, permission, filesystem, or device-specific errno names.
+
 ### `readlink`
 
 - **Difficulty level:** 02 — lower-intermediate utility.

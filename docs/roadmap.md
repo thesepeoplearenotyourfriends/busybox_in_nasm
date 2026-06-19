@@ -41,7 +41,7 @@ printenv, pwd, sleep, true, tty, ttysize, uname, usleep, whoami, yes
 Current diagnostic order:
 
 ```text
-true -> false -> echo -> yes -> pwd -> arch -> ascii -> clear -> uname -> env -> printenv -> sleep -> usleep -> hostname -> hostid -> logname -> nproc -> whoami -> tty -> ttysize -> cat -> head -> wc -> tee -> rev -> basename -> dirname -> which -> seq -> touch -> mkdir -> rmdir -> unlink -> ln -> readlink -> realpath -> stat
+true -> false -> echo -> yes -> pwd -> arch -> ascii -> clear -> uname -> env -> printenv -> sleep -> usleep -> hostname -> hostid -> logname -> nproc -> whoami -> tty -> ttysize -> cat -> head -> wc -> tee -> rev -> basename -> dirname -> which -> seq -> touch -> mkdir -> rmdir -> unlink -> ln -> link -> sync -> fsync -> readlink -> realpath -> stat
 ```
 
 ### Level 01: beginner streams, strings, and simple file I/O
@@ -56,12 +56,12 @@ link, mkdir, nl, paste, rev, rmdir, seq, strings, sync, tac, tee, touch,
 tr, unexpand, uniq, unix2dos, unlink, wc, which
 ```
 
-First Level 01 progress: `cat`, `head`, `wc`, `tee`, `rev`, `basename`, `dirname`, `which`, `seq`, `touch`, `mkdir`, `rmdir`, `unlink`, and `ln` are implemented. Level 02 filesystem inspection has started with `readlink`, `realpath`, and `stat`.
+First Level 01 progress: `cat`, `head`, `wc`, `tee`, `rev`, `basename`, `dirname`, `which`, `seq`, `touch`, `mkdir`, `rmdir`, `unlink`, `ln`, `link`, `sync`, and `fsync` are implemented. Level 02 filesystem inspection has started with `readlink`, `realpath`, and `stat`.
 
 Good remaining early targets after `pwd` and `cat`:
 
 ```text
-cut, cmp, unix2dos, dos2unix, link
+cut, cmp, unix2dos, dos2unix
 ```
 
 ### Level 02: lower-intermediate utilities

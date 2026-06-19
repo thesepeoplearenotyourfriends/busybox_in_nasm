@@ -43,7 +43,7 @@ assert_stdout() {
 
 # The command index is intentionally small metadata, but it should stay present
 # for each binary built by this first-pass Makefile.
-for tool in true false echo yes pwd arch ascii clear uname env printenv sleep usleep hostname hostid logname nproc whoami tty ttysize cat head wc tee rev basename dirname which seq touch mkdir rmdir unlink ln readlink realpath stat; do
+for tool in true false echo yes pwd arch ascii clear uname env printenv sleep usleep hostname hostid logname nproc whoami tty ttysize cat head wc tee rev basename dirname which seq touch mkdir rmdir unlink ln link sync fsync readlink realpath stat; do
     awk -F '\t' -v tool="$tool" 'NR > 1 && $1 == tool { found = 1 } END { exit found ? 0 : 1 }' "$ROOT_DIR/docs/command_index.tsv" \
         || fail "docs/command_index.tsv is missing $tool"
 done
@@ -202,6 +202,31 @@ link_inode=$(stat -c %i "$ln_link")
 [ "$source_inode" = "$link_inode" ] || fail 'ln result does not share the source inode'
 assert_status 1 "$BUILD_DIR/ln" "$ln_source"
 assert_status 1 "$BUILD_DIR/ln" "$ln_source" "$ln_link" extra
+
+
+link_source=/tmp/asmutils-link-source
+link_link=/tmp/asmutils-link-link
+rm -f "$link_source" "$link_link"
+printf 'link data
+' >"$link_source"
+assert_status 0 "$BUILD_DIR/link" "$link_source" "$link_link"
+cmp -s "$link_source" "$link_link" || fail 'link did not create a readable hard link'
+source_inode=$(stat -c %i "$link_source")
+link_inode=$(stat -c %i "$link_link")
+[ "$source_inode" = "$link_inode" ] || fail 'link result does not share the source inode'
+assert_status 1 "$BUILD_DIR/link" "$link_source"
+assert_status 1 "$BUILD_DIR/link" "$link_source" "$link_link" extra
+
+assert_status 0 "$BUILD_DIR/sync"
+assert_status 1 "$BUILD_DIR/sync" extra
+
+fsync_file=/tmp/asmutils-fsync-file
+printf 'sync me
+' >"$fsync_file"
+assert_status 0 "$BUILD_DIR/fsync" "$fsync_file"
+assert_status 1 "$BUILD_DIR/fsync"
+assert_status 1 "$BUILD_DIR/fsync" "$fsync_file" extra
+assert_status 1 "$BUILD_DIR/fsync" /tmp/asmutils-fsync-missing
 
 readlink_target=/tmp/asmutils-readlink-target
 readlink_link=/tmp/asmutils-readlink-link
