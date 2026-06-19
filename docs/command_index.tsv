@@ -33,6 +33,9 @@ mkdir	01	directory-create,mkdir-syscall,mode-bits
 rmdir	01	directory-remove,rmdir-syscall
 unlink	01	file-remove,unlink-syscall,directory-entry
 ln	01	hard-link,link-syscall,directory-entry
+link	01	hard-link,link-syscall,directory-entry
+sync	01	filesystem-sync,sync-syscall,no-args
+fsync	01	filesystem-sync,fsync-syscall,open-close
 readlink	02	symlink,readlink-syscall,stdout,path-inspection
 realpath	02	path-canonicalization,procfs,open-readlink-close
 stat	02	stat-syscall,file-metadata,decimal-format
