@@ -75,7 +75,3 @@ Use this question as the stopping criterion:
 > If this were the implementation available in a small BusyBox-like userland, would the supported command be useful and dependable rather than obviously a teaching stub?
 
 Distinct mechanisms help decide what is worth implementing next. BusyBox-like usefulness determines when the canonical implementation is finished.
-
-----
-
-So cmp becomes a particularly good first command under the new regime. Don't build “the syscall lesson called cmp.” Build cmp—BusyBox-sized, guts-out, tested, dependable—and preserve whatever simpler stages prove educational underneath it.

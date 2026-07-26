@@ -5,10 +5,10 @@
 ; FILE2 defaults to standard input, and one operand may be `-`.  -l reports
 ; every unequal byte in one-based decimal/octal form; -s suppresses all output;
 ; -n limits the number of bytes compared.  SKIP values and LIMIT are unsigned
-; decimal integers from 0 through UINT64_MAX.  At most one explicit `-` operand
-; is accepted because two logical streams cannot independently own one pipe.
+; decimal integers from 0 through UINT64_MAX.  If both operands name standard
+; input, they identify the same stream and are equal without consuming it.
 ;
-; The ordinary diagnostic names the first unequal one-based byte and line.
+; The ordinary diagnostic names the first unequal one-based character and line.
 ; Exit status is 0 for equal input, 1 for different input, and 2 for invocation,
 ; open/read/close/output errors.  Reads and writes retry EINTR; write_all also
 ; completes partial writes.  Files are streamed through fixed buffers, so file
@@ -42,11 +42,11 @@ read_prefix: db 'cmp: read failed: '
 read_prefix_len: equ $-read_prefix
 close_prefix: db 'cmp: close failed: '
 close_prefix_len: equ $-close_prefix
-stdin_twice_msg: db 'cmp: standard input may name only one input stream',10
-stdin_twice_len: equ $-stdin_twice_msg
+incompatible_msg: db 'cmp: options -l and -s are incompatible',10
+incompatible_len: equ $-incompatible_msg
 write_msg: db 'cmp: write failed',10
 write_len: equ $-write_msg
-differ_infix: db ' differ: byte '
+differ_infix: db ' differ: char '
 differ_infix_len: equ $-differ_infix
 line_infix: db ', line '
 line_infix_len: equ $-line_infix
@@ -74,13 +74,13 @@ list_mode: resb 1
 silent_mode: resb 1
 opened1: resb 1
 opened2: resb 1
-second_defaulted: resb 1
 len1: resq 1
 len2: resq 1
 pos1: resq 1
 pos2: resq 1
 byte_number: resq 1
 line_number: resq 1
+last_was_newline: resb 1
 different: resb 1
 final_status: resb 1
 
@@ -135,7 +135,7 @@ _start:
     inc r15
     jmp .short_loop
 .set_silent:
-    mov byte [silent_mode], 1   ; -s takes precedence over -l, as in GNU cmp.
+    mov byte [silent_mode], 1
     inc r15
     jmp .short_loop
 .short_done:
@@ -143,6 +143,11 @@ _start:
     jmp .parse_options
 
 .options_done:
+    cmp byte [list_mode], 0
+    je .options_compatible
+    cmp byte [silent_mode], 0
+    jne .incompatible_options
+.options_compatible:
     mov rax, r12
     sub rax, r14                ; one through four positional operands are valid.
     cmp rax, 1
@@ -160,7 +165,6 @@ _start:
     jmp .parse_skips
 .default_second:
     mov qword [name2], stdin_name
-    mov byte [second_defaulted], 1
 .parse_skips:
     cmp r14, r12
     jae .open_inputs
@@ -188,11 +192,8 @@ _start:
     jz .open_first
     test al, al
     jz .open_first
-    cmp byte [second_defaulted], 0
-    jne .same_stdin
-    jmp .stdin_twice
 .same_stdin:
-    xor edi, edi                ; `cmp -` compares stdin with itself, hence equal.
+    xor edi, edi                ; Both names share fd 0, so no bytes need consuming.
     jmp .exit
 .open_first:
     mov rdi, [name1]
@@ -247,10 +248,11 @@ _start:
     call named_error
     call close_inputs
     jmp .trouble_exit
-.stdin_twice:
-    mov rsi, stdin_twice_msg
-    mov rdx, stdin_twice_len
-    call diagnostic_part
+.incompatible_options:
+    mov rdi, 2
+    mov rsi, incompatible_msg
+    mov rdx, incompatible_len
+    call write_all                ; Invocation errors are not comparison silence.
     jmp .trouble_exit
 .usage:
     mov rsi, usage_msg
@@ -352,8 +354,12 @@ compare_streams:
 .different_silent:
 .same_byte:
     cmp al, 10
-    jne .advance
+    jne .advance_non_newline
+    mov byte [last_was_newline], 1
     inc qword [line_number]
+    jmp .advance
+.advance_non_newline:
+    mov byte [last_was_newline], 0
 .advance:
     inc qword [byte_number]
     inc r9
@@ -397,6 +403,18 @@ compare_streams:
     mov rax, [byte_number]
     dec rax
     call diagnostic_unsigned
+    cmp byte [list_mode], 0     ; GNU/POSIX list mode omits the EOF line number.
+    jne .eof_newline
+    mov rsi, line_infix
+    mov rdx, line_infix_len
+    call diagnostic_part
+    mov rax, [line_number]
+    cmp byte [last_was_newline], 0
+    je .eof_line_ready
+    dec rax                     ; EOF after newline belongs to the line just ended.
+.eof_line_ready:
+    call diagnostic_unsigned
+.eof_newline:
     call diagnostic_newline
 .equal_prefix:
     ret

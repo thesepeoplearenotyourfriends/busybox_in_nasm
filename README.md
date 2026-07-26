@@ -31,6 +31,11 @@ Educational clarity is more important than cleverness, size, or speed.
 
 Level 00 is complete — time for cake and confetti! 🎂🎊
 
+The initial primer/breadth phase is also complete. New canonical commands are
+expected to enter `src/` as practical, dependable BusyBox-style utilities rather
+than mechanism-only demonstrations. Smaller stages that isolate an educational
+mechanism belong under `lessons/<command>/` when they are useful to retain.
+
 ## Maturity model
 
 Having a source file means that a command's teaching mechanism exists; it does
@@ -78,8 +83,9 @@ An item may be marked not applicable only when the command's documented
 contract explains why (for example, `true` has no input stream).  The current
 audit inspected the actual `src/*.asm` implementations and the contracts in
 `docs/commands.md`, rather than inferring maturity from the roadmap.  `head`,
-`wc`, and `stat` meet the daily-use gate, including differential coverage
-against GNU coreutils 9.4.  The other commands remain `mechanism-complete`;
+`wc`, `stat`, and `cmp` meet the daily-use gate, including differential
+coverage against GNU coreutils 9.4 or GNU diffutils 3.10. The other commands
+remain `mechanism-complete`;
 several still do not retry `EINTR` or have a versioned named-reference
 differential suite.  No compatibility profile has yet been selected.
 
