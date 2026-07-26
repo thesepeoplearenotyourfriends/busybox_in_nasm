@@ -17,6 +17,30 @@ _start:
 
 Avoid building a shared runtime too early. A little repetition is useful while the project is still demonstrating the basic mechanics.
 
+## Layered commands
+
+`src/<command>.asm` must always contain the best field-usable implementation of a
+command. It is the canonical implementation and remains the source that the
+`Makefile` builds. Do not replace it with an early teaching version or make it
+depend on assembling the lesson layers in sequence.
+
+When a command has pedagogically meaningful intermediate designs, they may be
+kept under `lessons/<command>/` and named `NN-description.asm`, where `NN`
+records the teaching order and `description` identifies the idea introduced by
+that layer. Layers are optional. Naturally small commands such as `true`,
+`false`, `pwd`, `arch`, `clear`, `hostname`, and `sync` do not need artificial
+layers.
+
+Every retained layer must introduce a distinct concept rather than merely
+rearranging or polishing the previous file. Its header or accompanying lesson
+notes must document what the layer does and the limitations that keep it from
+being the field-usable implementation.
+
+Postpone shared includes until duplication across several mature commands
+demonstrably harms readability. If transparent includes are introduced later,
+also provide an expanded single-file assembly artifact or build target so a
+reader can inspect the complete program without following include boundaries.
+
 ## Comments
 
 Comments are part of the deliverable. Every utility should have a header that explains:
