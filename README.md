@@ -108,7 +108,7 @@ compatibility profile has yet been selected.
 | `tty` | 00 | source exists | `mechanism-complete` | checks stdin with `ioctl(TCGETS)` and prints its terminal path; supports silent `-s` |
 | `ttysize` | 00 | source exists | `mechanism-complete` | [🔗](docs/notes/ttysize.md) prints terminal rows and columns from `ioctl(TIOCGWINSZ)` on stdin |
 | `cat` | 01 | source exists | `mechanism-complete` | [🔗](docs/notes/cat.md) copies stdin or named files to stdout with a fixed buffer and write-all loop |
-| `head` | 01 | source exists | `mechanism-complete` | prints the first 10 lines from stdin or one named file |
+| `head` | 01 | source exists | `mechanism-complete` | defaults to 10 lines; supports `-n`, `-c`, stdin/file operands, and automatic multi-file headers |
 | `wc` | 01 | source exists | `mechanism-complete` | [🔗](docs/notes/wc.md) prints default line, word, and byte counts for stdin or one or more files |
 | `tee` | 01 | source exists | `mechanism-complete` | copies stdin to stdout and to one or more files; supports simple `-a` append mode |
 | `rev` | 01 | source exists | `mechanism-complete` | reverses each input line using a documented 4096-byte line buffer limit |
