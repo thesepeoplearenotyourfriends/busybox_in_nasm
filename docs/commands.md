@@ -274,6 +274,7 @@ This file records the teaching contract for each implemented command. The source
 
 - **Difficulty level:** 01 — beginner streams, strings, and simple file I/O.
 - **Tags:** `stdin`, `stdout`, `file-read`, `line-counting`, `byte-limiting`, `buffer-loop`, `multiple-operands`, `decimal-parse`.
+- **Maturity:** `daily-use complete`, with the supported output surface checked against GNU coreutils 9.4.
 - **Implemented behavior:** prints 10 lines by default; supports unsigned decimal `-n COUNT` and `-c COUNT`, multiple files, conventional `-` operands, `--`, and automatic multi-file headers. Reads and writes retry after `EINTR`, partial writes retain their unwritten suffix, and failures are aggregated across operands.
 - **Unsupported behavior:** combined/attached short options, signed counts, suffix multipliers, long options, and errno-specific wording are not implemented. Quiet (`-q`) and verbose (`-v`) header controls are deliberately omitted: one input has no header and more than one operand automatically gives every operand a header.
 - **Syscalls used:** `open(2)`, `read(2)`, `write(2)`, `close(2)`, and `exit(2)`.

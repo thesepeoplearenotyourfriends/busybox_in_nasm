@@ -157,6 +157,8 @@ _start:
     mov qword [current_name], stdin_name
     xor edi, edi                ; fd 0 is reused for every '-' operand.
     call process_stream
+    cmp qword [final_status], 2 ; A failed stdout makes further operands useless.
+    je .exit
     jmp .next_operand
 
     ; Section 3: stream opening.
@@ -286,6 +288,9 @@ process_stream:
     test r9, r9
     jnz .scan_lines
     mov r10, r11                ; Exclude bytes after the limiting newline.
+    ; Line mode has already reduced r9 once per newline.  Do not fall through
+    ; into byte-mode subtraction and underflow the now-zero line count.
+    jmp .write_chunk
 .byte_chunk:
     sub r9, r10                 ; byte-mode reads are capped, so no underflow.
 .write_chunk:

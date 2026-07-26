@@ -101,8 +101,8 @@ cmp -s "$cat_output" /tmp/asmutils-cat.expected || fail 'cat did not copy file a
 # than diffed because errno wording is an intentionally documented difference.
 HEAD_REFERENCE=head
 command -v "$HEAD_REFERENCE" >/dev/null 2>&1 || fail 'GNU coreutils head reference is required'
-"$HEAD_REFERENCE" --version 2>/dev/null | sed -n '1p' | grep 'GNU coreutils' >/dev/null \
-    || fail 'the differential reference must be GNU coreutils head'
+"$HEAD_REFERENCE" --version 2>/dev/null | sed -n '1p' | grep 'GNU coreutils) 9\.4$' >/dev/null \
+    || fail 'the differential reference must be GNU coreutils head 9.4'
 
 head_empty=/tmp/asmutils-head-empty
 head_short=/tmp/asmutils-head-short
