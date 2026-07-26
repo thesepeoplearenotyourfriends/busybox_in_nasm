@@ -77,10 +77,10 @@ A daily-use command must have tests and documented behavior covering:
 An item may be marked not applicable only when the command's documented
 contract explains why (for example, `true` has no input stream).  The current
 audit inspected the actual `src/*.asm` implementations and the contracts in
-`docs/commands.md`, rather than inferring maturity from the roadmap.  No command
-currently meets every applicable daily-use criterion—most notably, there is no
-versioned named-reference differential suite and several implementations do not
-retry `EINTR`—so every current command remains `mechanism-complete`.  No
+`docs/commands.md`, rather than inferring maturity from the roadmap.  `head`
+meets the daily-use gate, including differential coverage against GNU coreutils
+9.4.  The other commands remain `mechanism-complete`; several still do not
+retry `EINTR` or have a versioned named-reference differential suite.  No
 compatibility profile has yet been selected.
 
 ## Current utilities
@@ -108,7 +108,7 @@ compatibility profile has yet been selected.
 | `tty` | 00 | source exists | `mechanism-complete` | checks stdin with `ioctl(TCGETS)` and prints its terminal path; supports silent `-s` |
 | `ttysize` | 00 | source exists | `mechanism-complete` | [🔗](docs/notes/ttysize.md) prints terminal rows and columns from `ioctl(TIOCGWINSZ)` on stdin |
 | `cat` | 01 | source exists | `mechanism-complete` | [🔗](docs/notes/cat.md) copies stdin or named files to stdout with a fixed buffer and write-all loop |
-| `head` | 01 | source exists | `mechanism-complete` | prints the first 10 lines from stdin or one named file |
+| `head` | 01 | source exists | `daily-use complete` | defaults to 10 lines; supports `-n`, `-c`, stdin/file operands, and automatic multi-file headers |
 | `wc` | 01 | source exists | `mechanism-complete` | [🔗](docs/notes/wc.md) prints default line, word, and byte counts for stdin or one or more files |
 | `tee` | 01 | source exists | `mechanism-complete` | copies stdin to stdout and to one or more files; supports simple `-a` append mode |
 | `rev` | 01 | source exists | `mechanism-complete` | reverses each input line using a documented 4096-byte line buffer limit |

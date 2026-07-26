@@ -273,15 +273,16 @@ This file records the teaching contract for each implemented command. The source
 ### `head`
 
 - **Difficulty level:** 01 — beginner streams, strings, and simple file I/O.
-- **Tags:** `stdin`, `stdout`, `file-read`, `line-counting`, `buffer-loop`.
-- **Implemented behavior:** prints the first 10 newline-terminated lines from stdin or from one named file.
-- **Unsupported behavior:** options such as `-n`, byte counts, multiple-file headers, quiet/verbose modes, long options, and errno-specific diagnostics are not implemented.
+- **Tags:** `stdin`, `stdout`, `file-read`, `line-counting`, `byte-limiting`, `buffer-loop`, `multiple-operands`, `decimal-parse`.
+- **Maturity:** `daily-use complete`, with the supported output surface checked against GNU coreutils 9.4.
+- **Implemented behavior:** prints 10 lines by default; supports unsigned decimal `-n COUNT` and `-c COUNT`, multiple files, conventional `-` operands, `--`, and automatic multi-file headers. Reads and writes retry after `EINTR`, partial writes retain their unwritten suffix, and failures are aggregated across operands.
+- **Unsupported behavior:** combined/attached short options, signed counts, suffix multipliers, long options, and errno-specific wording are not implemented. Quiet (`-q`) and verbose (`-v`) header controls are deliberately omitted: one input has no header and more than one operand automatically gives every operand a header.
 - **Syscalls used:** `open(2)`, `read(2)`, `write(2)`, `close(2)`, and `exit(2)`.
 - **Manual tests:**
   - `seq 12 | ./build/head`
-  - `./build/head README.md`
-  - `./build/head README.md docs/roadmap.md; echo $?`
-- **Known limitations:** only the default 10-line subset is implemented, and at most one file operand is accepted.
+  - `./build/head -n 3 README.md`
+  - `./build/head -c 20 README.md docs/roadmap.md`
+- **Known limitations:** accepted counts stop at `UINT64_MAX`; diagnostics name operands but intentionally do not translate errno values. The initial one-file line-counting design remains as `lessons/head/01-line-counting.asm`.
 
 ### `wc`
 

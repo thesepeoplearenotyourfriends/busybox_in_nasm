@@ -20,7 +20,7 @@ whoami	00	mechanism-complete	geteuid-syscall,passwd-file,account-lookup,stdout,o
 tty	00	mechanism-complete	ioctl-syscall,procfs,readlink-syscall,stdin,tty-detection,option-subset
 ttysize	00	mechanism-complete	ioctl-syscall,terminal-size,stdin,decimal-format
 cat	01	mechanism-complete	stdin,stdout,file-read,buffer-loop,open-read-write-close
-head	01	mechanism-complete	stdin,stdout,file-read,line-counting,buffer-loop
+head	01	daily-use complete	stdin,stdout,file-read,line-counting,byte-limiting,buffer-loop,multiple-operands,decimal-parse
 wc	01	mechanism-complete	stdin,stdout,file-read,byte-line-word-counting
 tee	01	mechanism-complete	stdin,stdout,file-write,buffer-loop
 rev	01	mechanism-complete	stdin,stdout,string-scan,line-buffer

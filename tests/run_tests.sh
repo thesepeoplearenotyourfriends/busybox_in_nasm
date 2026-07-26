@@ -95,11 +95,84 @@ CAT_STDIN
 printf 'alpha\nbeta\ngamma\ndelta\nepsilon\n' >/tmp/asmutils-cat.expected
 cmp -s "$cat_output" /tmp/asmutils-cat.expected || fail 'cat did not copy file and stdin operands in order'
 
-head_input=/tmp/asmutils-head.input
-awk 'BEGIN { for (i = 1; i <= 12; i++) printf "line %d\n", i }' >"$head_input"
-head_output=$("$BUILD_DIR/head" "$head_input")
-expected_head=$(sed -n '1,10p' "$head_input")
-[ "$head_output" = "$expected_head" ] || fail 'head did not print the first ten lines'
+# Head is compared with GNU coreutils `head`, our explicitly named reference.
+# No output normalization is needed: the supported headers and data presentation
+# intentionally match GNU head exactly.  Diagnostics are tested by content rather
+# than diffed because errno wording is an intentionally documented difference.
+HEAD_REFERENCE=head
+command -v "$HEAD_REFERENCE" >/dev/null 2>&1 || fail 'GNU coreutils head reference is required'
+"$HEAD_REFERENCE" --version 2>/dev/null | sed -n '1p' | grep 'GNU coreutils) 9\.4$' >/dev/null \
+    || fail 'the differential reference must be GNU coreutils head 9.4'
+
+head_empty=/tmp/asmutils-head-empty
+head_short=/tmp/asmutils-head-short
+head_long=/tmp/asmutils-head-long
+head_no_newline=/tmp/asmutils-head-no-newline
+: >"$head_empty"
+printf 'one\ntwo\n' >"$head_short"
+awk 'BEGIN { for (i = 1; i <= 12; i++) printf "line %d\n", i }' >"$head_long"
+printf 'one\ntwo without newline' >"$head_no_newline"
+
+for input in "$head_empty" "$head_short" "$head_long" "$head_no_newline"; do
+    "$BUILD_DIR/head" "$input" >/tmp/asmutils-head.actual
+    "$HEAD_REFERENCE" "$input" >/tmp/asmutils-head.reference
+    cmp -s /tmp/asmutils-head.actual /tmp/asmutils-head.reference \
+        || fail "head default output differs from GNU coreutils for $input"
+done
+
+printf 'stdin one\nstdin two\n' | "$BUILD_DIR/head" - - >/tmp/asmutils-head.actual
+printf 'stdin one\nstdin two\n' | "$HEAD_REFERENCE" - - >/tmp/asmutils-head.reference
+cmp -s /tmp/asmutils-head.actual /tmp/asmutils-head.reference \
+    || fail 'head stdin/repeated-dash behavior differs from GNU coreutils'
+
+"$BUILD_DIR/head" -n 0 "$head_long" >/tmp/asmutils-head.actual
+[ ! -s /tmp/asmutils-head.actual ] || fail 'head -n 0 produced output for one operand'
+for count in 1 3 20; do
+    "$BUILD_DIR/head" -n "$count" "$head_long" >/tmp/asmutils-head.actual
+    "$HEAD_REFERENCE" -n "$count" "$head_long" >/tmp/asmutils-head.reference
+    cmp -s /tmp/asmutils-head.actual /tmp/asmutils-head.reference \
+        || fail "head -n $count differs from GNU coreutils"
+done
+
+head_binary=/tmp/asmutils-head-binary
+printf 'A\000B\nC\000D' >"$head_binary"
+for count in 0 1 4 99; do
+    "$BUILD_DIR/head" -c "$count" "$head_binary" >/tmp/asmutils-head.actual
+    "$HEAD_REFERENCE" -c "$count" "$head_binary" >/tmp/asmutils-head.reference
+    cmp -s /tmp/asmutils-head.actual /tmp/asmutils-head.reference \
+        || fail "head -c $count (including NUL bytes) differs from GNU coreutils"
+done
+
+"$BUILD_DIR/head" -n 1 "$head_short" "$head_long" >/tmp/asmutils-head.actual
+"$HEAD_REFERENCE" -n 1 "$head_short" "$head_long" >/tmp/asmutils-head.reference
+cmp -s /tmp/asmutils-head.actual /tmp/asmutils-head.reference \
+    || fail 'head multiple-file headers differ from GNU coreutils'
+
+head_missing=/tmp/asmutils-head-does-not-exist
+rm -f "$head_missing"
+set +e
+"$BUILD_DIR/head" "$head_missing" "$head_short" >/tmp/asmutils-head.actual 2>/tmp/asmutils-head.err
+head_mixed_status=$?
+set -e
+[ "$head_mixed_status" -ne 0 ] || fail 'head succeeded despite a missing input'
+grep "$head_missing" /tmp/asmutils-head.err >/dev/null \
+    || fail 'head missing-file diagnostic did not name the failing operand'
+grep 'one' /tmp/asmutils-head.actual >/dev/null \
+    || fail 'head did not continue to a valid file after a missing input'
+
+for invalid_count in '' -1 12x 18446744073709551616 999999999999999999999999999999; do
+    assert_status 1 "$BUILD_DIR/head" -n "$invalid_count" "$head_short"
+done
+
+if [ -e /dev/full ]; then
+    set +e
+    "$BUILD_DIR/head" "$head_long" >/dev/full 2>/tmp/asmutils-head-broken.err
+    head_broken_status=$?
+    set -e
+    [ "$head_broken_status" -ne 0 ] || fail 'head succeeded after a broken/full output'
+    grep 'write failed' /tmp/asmutils-head-broken.err >/dev/null \
+        || fail 'head did not diagnose broken/full output'
+fi
 
 wc_one=/tmp/asmutils-wc-one.input
 wc_two=/tmp/asmutils-wc-two.input
