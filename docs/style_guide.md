@@ -89,17 +89,24 @@ The familiar command name is the user's mental index, so the recognizable core b
 
 When behavior is intentionally incomplete, document that limitation in the file header and in project docs where appropriate.
 
-## Interim duplication decision during filesystem maturation
+## Duplication decision after the `head` through `stat` maturation
 
-A preliminary review of `head`, `wc`, `mkdir`, `ln`, and `stat` found repeated `write_all`,
-C-string measurement, diagnostics, and number-formatting routines. They remain
-local for now. The I/O loops are small, while their error contracts and register
-ownership still differ; pathname joining and basename selection are command
-policy rather than generic machinery. An include becomes worthwhile when a
-third mature pathname command needs the same bounded join contract, or when
-three mature commands use the same writer calling convention and error result.
-Until then, keeping each syscall path visible is more educational than saving a
-few repeated lines. This decision must be revisited after the canonical `wc`
-and `stat` implementations complete their planned maturation; they currently
-provide evidence about existing duplication, not the final mature contracts
-required by the batch-wide audit.
+The completed audit compared canonical `head`, `wc`, `mkdir`, `ln`, and `stat`
+and also inspected nearby stream and pathname commands.  All five contain a
+small `write_all` loop, but the surrounding contracts differ: stream commands
+promote stdout failure into an early-stop status, filesystem commands mostly
+use the writer for best-effort diagnostics, and each source assigns different
+long-lived registers.  C-string measurement is absent where compile-time
+lengths make it clearer.  Decimal formatting occurs in `head`, `wc`, and
+`stat`, but their parser/formatter direction, buffer ownership, signed-time
+needs, and fixed-width output are not one common contract.  Bounded basename
+joining remains specific to `ln`; `mkdir` instead mutates one component buffer.
+
+**Decision: keep the duplication local.**  The repeated routines are short,
+substantially visible teaching mechanisms rather than a maintenance burden.
+An include would save lines but make a reader leave the command precisely at
+the raw `write(2)` and integer-formatting lessons.  Reconsider sharing when a
+third mature command needs the same bounded path-join contract, or when several
+more daily-use commands require an identical writer plus identical diagnostic
+and status conventions.  If that threshold is reached, add the expanded-source
+Makefile target required above at the same time as the first include.

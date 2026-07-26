@@ -286,16 +286,16 @@ This file records the teaching contract for each implemented command. The source
 
 ### `wc`
 
-- **Difficulty level:** 01 — beginner streams, strings, and simple file I/O.
-- **Tags:** `stdin`, `stdout`, `file-read`, `byte-line-word-counting`.
-- **Implemented behavior:** with no operands, counts stdin; with file operands, prints default line, word, and byte counts for each file and prints a `total` line when more than one file operand was provided.
-- **Unsupported behavior:** count-selection options such as `-l`, `-w`, `-c`, `-m`, and `-L`, long options, exact GNU/BSD column spacing, the conventional `-` stdin operand, and errno-specific diagnostics are not implemented.
-- **Syscalls used:** `open(2)`, `read(2)`, `write(2)`, `close(2)`, and `exit(2)`.
-- **Manual tests:**
-  - `printf 'one two\nthree\n' | ./build/wc`
-  - `./build/wc README.md docs/commands.md`
-  - `./build/wc missing-file; echo $?`
-- **Known limitations:** words are separated by ASCII whitespace bytes only, counts are unsigned 64-bit values, and output uses simple `lines words bytes [name]` columns rather than compatibility spacing.
+- **Difficulty level:** 01 — streaming state machines and checked counters.
+- **Tags:** `stdin`, `stdout`, `file-read`, `byte-line-word-counting`, `utf8-policy`, `maximum-line-length`, `multiple-operands`.
+- **Implemented behavior:** `wc [-l] [-w] [-c] [-m] [-L] [--] [FILE...]`; selectors combine and print in fixed `l w m c L` order. No selector means lines, words, and bytes. A literal `-` consumes the current stdin stream position, every successful input contributes to a final total when more than one operand was supplied, and unrelated failures do not stop later operands.
+- **Encoding and length policy:** `-m` uses a locale-independent UTF-8 structural decoder. ASCII and valid lead bytes begin one character; continuation bytes complete it; each malformed byte begins one replacement character; an incomplete final sequence counts once. `-L` counts bytes between newline bytes, excludes newline, and includes the final unterminated line. It is deliberately not terminal display width. Words use ASCII space and bytes 9 through 13 as separators.
+- **Output policy:** selected unsigned decimal fields use one separating space followed by an optional operand name. GNU alignment padding is intentionally omitted. Totals sum counts but take the maximum of `-L`. Counter and total overflow fails explicitly rather than wrapping.
+- **Buffer policy:** the 4096-byte block buffer is reused as a streaming window, not a file or line limit; scanner state crosses read boundaries, so input is never silently truncated.
+- **Unsupported behavior:** GNU long option aliases, locale-dependent multibyte decoding, display-column width, and errno-name decoding.
+- **Syscalls used:** `open(2)`, `read(2)`, `write(2)`, `close(2)`, and `exit(2)`; reads and writes retry `EINTR`, and writes handle partial completion.
+- **Reference:** value semantics for the supported ASCII surface and valid UTF-8 `-m` inputs are differentially tested against GNU coreutils 9.4. Output is normalized only for the documented padding difference. No complete GNU compatibility profile is claimed.
+- **Lesson:** `lessons/wc/01-default-counters.asm` preserves the genuinely simpler stage where one scanner always produces the default three counters.
 
 ### `tee`
 
@@ -503,16 +503,16 @@ This file records the teaching contract for each implemented command. The source
 
 ### `stat`
 
-- **Difficulty level:** 02 — lower-intermediate utility.
-- **Tags:** `stat-syscall`, `file-metadata`, `decimal-format`.
-- **Implemented behavior:** accepts exactly one pathname operand and prints a compact teaching summary containing size, permission/special mode bits as a decimal integer, inode number, and link count.
-- **Unsupported behavior:** options such as `-c`, `-f`, `-L`, `--printf`, `--help`, and `--version`, timestamps, owner/group names, file type names, device numbers, filesystem statistics, and GNU-compatible formatting are not implemented.
-- **Syscalls used:** `stat(2)`, `write(2)`, and `exit(2)`.
-- **Manual tests:**
-  - `printf data >/tmp/asm-stat && ./build/stat /tmp/asm-stat`
-  - `./build/stat /tmp/missing-stat-input; echo $?`
-  - `./build/stat one two; echo $?`
-- **Known limitations:** this deliberately small output is for learning the `struct stat` fields and integer formatting, not for script compatibility with GNU or BusyBox `stat`.
+- **Difficulty level:** 02 — lower-intermediate Linux ABI metadata.
+- **Tags:** `stat-syscall`, `lstat-syscall`, `file-metadata`, `permissions`, `timestamps`, `stable-format`, `multiple-operands`.
+- **Implemented behavior:** `stat [-L] [--stable] [--] FILE...`. By default `lstat(2)` describes a symbolic link itself; `-L` follows links with `stat(2)`. Every operand is attempted. Human output includes pathname, file type, four-digit octal permissions, familiar type/`rwx` text, size, inode, link count, numeric UID/GID, raw Linux `dev_t` and `rdev`, and access/modify/change timestamps.
+- **Time policy:** timestamps are signed Unix epoch seconds followed by a decimal point and exactly nine nanosecond digits. Formatting is independent of locale, timezone, and libc.
+- **Stable project interface:** `--stable` emits one tab-separated record per successful operand in fixed order: `path_hex`, `type`, `mode`, `perm`, `size`, `inode`, `links`, `uid`, `gid`, `dev`, `rdev`, `atime`, `mtime`, `ctime`. Path bytes are lowercase hexadecimal, so tabs and newlines cannot make the record ambiguous. This is deliberately not called `-c FORMAT`; GNU's formatting language is not implemented.
+- **Buffer policy:** pathnames are passed directly from `argv` to the kernel and streamed as text or hexadecimal output; there is no fixed pathname buffer or truncation boundary in `stat`.
+- **Unsupported behavior:** GNU `-c`/`--format`, `--printf`, filesystem `-f`, birth time, owner/group name lookup, major/minor presentation, errno-name decoding, and GNU/BusyBox default-output compatibility. Raw `dev_t` values are stable numeric kernel fields rather than decoded major/minor pairs.
+- **Syscalls used:** `lstat(2)`, `stat(2)`, `write(2)`, and `exit(2)`; writes retry `EINTR` and complete partial writes.
+- **Reference:** stable numeric metadata and symbolic-link policy are differentially checked against GNU coreutils 9.4; `--stable` itself is tested byte-for-byte as a project interface. No complete GNU compatibility profile is claimed.
+- **Lesson:** `lessons/stat/01-compact-struct-summary.asm` retains the first-stage four-field struct-offset lesson before type, permission, timestamp, and format policy are introduced.
 
 ## Roadmap direction
 
