@@ -145,6 +145,7 @@ The goal is approachable, not simplified-to-death: useful margin notes for someo
 - `nasm`
 - `ld` from GNU binutils or a compatible linker
 - POSIX-ish shell for tests
+- GNU coreutils 9.4 for the **differential test suite only**
 
 ## Build
 
