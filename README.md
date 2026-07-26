@@ -77,11 +77,11 @@ A daily-use command must have tests and documented behavior covering:
 An item may be marked not applicable only when the command's documented
 contract explains why (for example, `true` has no input stream).  The current
 audit inspected the actual `src/*.asm` implementations and the contracts in
-`docs/commands.md`, rather than inferring maturity from the roadmap.  `head`
-meets the daily-use gate, including differential coverage against GNU coreutils
-9.4.  The other commands remain `mechanism-complete`; several still do not
-retry `EINTR` or have a versioned named-reference differential suite.  No
-compatibility profile has yet been selected.
+`docs/commands.md`, rather than inferring maturity from the roadmap.  `head`,
+`wc`, and `stat` meet the daily-use gate, including differential coverage
+against GNU coreutils 9.4.  The other commands remain `mechanism-complete`;
+several still do not retry `EINTR` or have a versioned named-reference
+differential suite.  No compatibility profile has yet been selected.
 
 ## Current utilities
 
@@ -109,7 +109,7 @@ compatibility profile has yet been selected.
 | `ttysize` | 00 | source exists | `mechanism-complete` | [🔗](docs/notes/ttysize.md) prints terminal rows and columns from `ioctl(TIOCGWINSZ)` on stdin |
 | `cat` | 01 | source exists | `mechanism-complete` | [🔗](docs/notes/cat.md) copies stdin or named files to stdout with a fixed buffer and write-all loop |
 | `head` | 01 | source exists | `daily-use complete` | defaults to 10 lines; supports `-n`, `-c`, stdin/file operands, and automatic multi-file headers |
-| `wc` | 01 | source exists | `mechanism-complete` | [🔗](docs/notes/wc.md) prints default line, word, and byte counts for stdin or one or more files |
+| `wc` | 01 | source exists | `daily-use complete` | [🔗](docs/notes/wc.md) selectable line, word, byte, UTF-8 character, and maximum byte-line counts |
 | `tee` | 01 | source exists | `mechanism-complete` | copies stdin to stdout and to one or more files; supports simple `-a` append mode |
 | `rev` | 01 | source exists | `mechanism-complete` | reverses each input line using a documented 4096-byte line buffer limit |
 | `basename` | 01 | source exists | `mechanism-complete` | strips directory prefixes and trailing slashes from one pathname operand |
@@ -117,16 +117,16 @@ compatibility profile has yet been selected.
 | `which` | 01 | source exists | `mechanism-complete` | searches `PATH` for executable command names, or checks paths that contain `/` |
 | `seq` | 01 | source exists | `mechanism-complete` | prints increasing unsigned decimal sequences for 1-, 2-, or 3-operand forms |
 | `touch` | 01 | source exists | `mechanism-complete` | updates file timestamps with `utimensat(2)` and creates missing files with `open(2)` |
-| `mkdir` | 01 | source exists | `mechanism-complete` | creates one or more directories with mode `0777` before umask filtering |
+| `mkdir` | 01 | source exists | `mechanism-complete` | supports `-p`, exact octal `-m`, `--`, and aggregate multi-operand failure |
 | `rmdir` | 01 | source exists | `mechanism-complete` | removes one or more empty directories |
 | `unlink` | 01 | source exists | `mechanism-complete` | removes one pathname with `unlink(2)` |
-| `ln` | 01 | source exists | `mechanism-complete` | creates a two-operand hard link with `link(2)` |
+| `ln` | 01 | source exists | `mechanism-complete` | supports hard/symbolic links, `-f`, `--`, and destination-directory forms |
 | `link` | 01 | source exists | `mechanism-complete` | accepts exactly `FILE LINK_NAME` and creates a hard link with `link(2)`; no options or symbolic links |
 | `sync` | 01 | source exists | `mechanism-complete` | accepts no operands and calls global `sync(2)`; per-file modes and options are not implemented |
 | `fsync` | 01 | source exists | `mechanism-complete` | opens exactly one pathname read-only, calls `fsync(2)`, and closes it; diagnostics are intentionally brief |
 | `readlink` | 02 | source exists | `mechanism-complete` | prints the raw target of exactly one symbolic link; it does not canonicalize paths or support options |
 | `realpath` | 02 | source exists | `mechanism-complete` | resolves one existing pathname through `/proc/self/fd`; procfs is required and missing-path modes are not supported |
-| `stat` | 02 | source exists | `mechanism-complete` | prints size, decimal mode bits, inode, and link count for one pathname; output is not GNU/BusyBox compatible |
+| `stat` | 02 | source exists | `daily-use complete` | readable multi-path metadata, default link inspection, `-L`, and stable `--stable` records |
 
 Difficulty and topic metadata are tracked in `docs/command_index.tsv`; per-command teaching contracts are tracked in `docs/commands.md`. Source files stay flat under `src/` so commands remain easy to find by name.
 
@@ -146,6 +146,7 @@ The goal is approachable, not simplified-to-death: useful margin notes for someo
 - `ld` from GNU binutils or a compatible linker
 - POSIX-ish shell for tests
 - GNU coreutils 9.4 for the **differential test suite only**
+- Python 3 for constructing byte-exact expected `stat --stable` records in tests
 
 ## Build
 

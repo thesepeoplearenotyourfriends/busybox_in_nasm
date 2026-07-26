@@ -152,21 +152,27 @@ Purpose: parsers, interpreters, REPLs, terminal UI, line editing, regular expres
 
 Examples include `ash`, `awk`, `bc`, `dc`, `ed`, `hexedit`, `hush`, `mim`, `sed`, `sh`, and `vi`. Do not begin here. For `mim`, first confirm the exact BusyBox command semantics for the target BusyBox version before implementation.
 
-## Next implementation sequence
+## Completed maturation sequence and next implementation order
 
-The near-term work is maturation rather than accumulating command names. Follow this order:
+The first vertical-maturation sequence is complete:
 
-1. **Reconcile the repository.** Cross-check every claimed command and maturity value in `docs/command_index.tsv` against `Makefile`'s `TOOLS`, the actual `src/*.asm` files, and the descriptive contracts in `docs/commands.md`. Resolve discrepancies before using the inventory to plan work. In particular, do not interpret a source file or a roadmap entry as evidence of daily-use completeness.
-2. **Mature `head`.** Grow beyond its current default-only, single-file subset. The target is count selection (beginning with `-n`, then a clearly documented byte-count form), multiple file operands with appropriate headers and quiet/verbose control, correct handling of a final unterminated line, and robust read/write/error behavior. Keep the buffered stopping logic explicit enough to teach why bytes after the requested boundary are not emitted.
-3. **Mature `wc`.** Add `-l`, `-w`, `-c`, `-m`, and `-L` selection with well-defined combinations; support `-` as stdin among file operands; retain correct per-input totals; and make output columns and failures consistent and documented. Character counting must introduce an explicit encoding policy rather than silently calling bytes characters, while maximum-line-length handling must cover a final unterminated line.
-4. **Mature selected filesystem commands.** Prefer depth in `mkdir`, `ln`, and `stat` before adding another shallow filesystem wrapper:
-   - `mkdir`: add readable mode parsing for `-m` and component-by-component parent creation for `-p`, including the existing-directory and partial-failure cases.
-   - `ln`: add symbolic links with `-s`, then teach destination replacement and directory-target forms with explicit `-f`/dereference policy; preserve the simple hard-link path as the introductory case.
-   - `stat`: expand the teaching summary to cover file type, permissions, ownership, device information, and timestamps; add a documented symbolic-link dereference choice and a small, deliberate format-selection interface rather than attempting GNU formatting all at once.
+1. **Reconcile the repository.** Completed by cross-checking claimed commands and maturity values against `Makefile`'s `TOOLS`, the actual `src/*.asm` files, and the descriptive contracts in `docs/commands.md`; roadmap entries alone were not treated as implementation evidence.
+2. **Mature `head`.** Completed with count selection, multiple streams, automatic headers, robust I/O, and GNU coreutils 9.4 differential tests.
+3. **Mature `wc`.** Completed with selectable counters, repeated stdin operands, checked totals, an explicit UTF-8 policy, byte-based maximum line length, and GNU coreutils 9.4 differential tests.
+4. **Mature selected filesystem commands.** Completed without adding shallow wrappers:
+   - `mkdir`: now has numeric `-m`, component-by-component `-p`, existing-directory policy, and aggregate failure handling.
+   - `ln`: now has symbolic links, safe force replacement, directory-target forms, and an explicit dereference policy while retaining the introductory lesson.
+   - `stat`: now covers file type, permissions, ownership, raw device fields, timestamps, default link inspection, `-L`, and the fixed project `--stable` interface.
 
 These targets are derived from the implemented subsets and limitations recorded in `docs/commands.md`; that file remains descriptive and must not acquire a competing priority list.
 
-After this sequence, `cmp` is a suitable breadth addition because parallel buffered reads, the first differing byte/line, and unequal-length EOF handling are mechanisms not yet taught together. `ls` should follow when directory enumeration and presentation—not merely another pathname syscall—become the intended teaching focus. Broader work such as `grep`, `find`, `ps`, networking, compression, shells, package tools, init tools, and filesystem repair remains later work unless it is selected to teach a clearly missing mechanism.
+The next implementation should be `cmp`, because parallel buffered reads, the
+first differing byte/line, and unequal-length EOF handling are mechanisms not
+yet taught together. `ls` should follow when directory enumeration and
+presentation—not merely another pathname syscall—become the intended teaching
+focus. Broader work such as `grep`, `find`, `ps`, networking, compression,
+shells, package tools, init tools, and filesystem repair remains later work
+unless it is selected to teach a clearly missing mechanism.
 
 ## Worklog rule
 

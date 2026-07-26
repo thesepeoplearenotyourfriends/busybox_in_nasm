@@ -174,16 +174,62 @@ if [ -e /dev/full ]; then
         || fail 'head did not diagnose broken/full output'
 fi
 
+# Mature wc: GNU coreutils 9.4 is the named reference for ASCII count
+# semantics. Output is normalized only for GNU's alignment padding; this
+# project's single-space formatting is an intentional documented divergence.
+WC_REFERENCE=wc
+"$WC_REFERENCE" --version 2>/dev/null | sed -n '1p' | grep 'GNU coreutils) 9\.4$' >/dev/null \
+    || fail 'the wc differential reference must be GNU coreutils wc 9.4'
 wc_one=/tmp/asmutils-wc-one.input
 wc_two=/tmp/asmutils-wc-two.input
+wc_binary=/tmp/asmutils-wc-binary.input
 printf 'one two\nthree\n' >"$wc_one"
 printf 'x y z' >"$wc_two"
+printf 'A\000B\nC\000D' >"$wc_binary"
 assert_stdout "2 3 14" "$BUILD_DIR/wc" <"$wc_one"
-expected_wc_files="2 3 14 $wc_one
-0 3 5 $wc_two
-2 6 19 total"
-actual_wc_files=$("$BUILD_DIR/wc" "$wc_one" "$wc_two")
-[ "$actual_wc_files" = "$expected_wc_files" ] || fail 'wc did not print file counts and total'
+: >/tmp/asmutils-wc-empty
+assert_stdout "0 0 0 0 0 /tmp/asmutils-wc-empty" \
+    "$BUILD_DIR/wc" -lwmcL /tmp/asmutils-wc-empty
+for options in -l -w -c -lw -lwc -L -lcL; do
+    "$BUILD_DIR/wc" "$options" "$wc_one" "$wc_two" >/tmp/asmutils-wc.actual
+    "$WC_REFERENCE" "$options" "$wc_one" "$wc_two" | awk '{$1=$1; print}' >/tmp/asmutils-wc.reference
+    cmp -s /tmp/asmutils-wc.actual /tmp/asmutils-wc.reference \
+        || fail "wc $options values differ from GNU coreutils"
+done
+"$BUILD_DIR/wc" -lwc "$wc_binary" >/tmp/asmutils-wc.actual
+"$WC_REFERENCE" -lwc "$wc_binary" | awk '{$1=$1; print}' >/tmp/asmutils-wc.reference
+cmp -s /tmp/asmutils-wc.actual /tmp/asmutils-wc.reference \
+    || fail 'wc binary line/word/byte values differ from GNU coreutils'
+printf 'stdin words\n' | "$BUILD_DIR/wc" -c - - >/tmp/asmutils-wc.actual
+printf '12 -\n0 -\n12 total\n' >/tmp/asmutils-wc.expected
+cmp -s /tmp/asmutils-wc.actual /tmp/asmutils-wc.expected \
+    || fail 'wc repeated stdin operands did not continue the same stream'
+# UTF-8 policy: valid sequences count once; each malformed byte is one
+# replacement character; -L remains bytes, including an unterminated final line.
+printf 'A\303\251\nxyz\200' | "$BUILD_DIR/wc" -mL >/tmp/asmutils-wc.actual
+printf '7 4\n' >/tmp/asmutils-wc.expected
+cmp -s /tmp/asmutils-wc.actual /tmp/asmutils-wc.expected \
+    || fail 'wc UTF-8 replacement-unit or byte-line-length policy changed'
+printf 'A\303\251\nxyz' >/tmp/asmutils-wc-utf8
+LC_ALL=C.UTF-8 "$BUILD_DIR/wc" -m /tmp/asmutils-wc-utf8 >/tmp/asmutils-wc.actual
+LC_ALL=C.UTF-8 "$WC_REFERENCE" -m /tmp/asmutils-wc-utf8 | awk '{$1=$1; print}' >/tmp/asmutils-wc.reference
+cmp -s /tmp/asmutils-wc.actual /tmp/asmutils-wc.reference \
+    || fail 'wc valid UTF-8 character count differs from GNU coreutils'
+wc_missing=/tmp/asmutils-wc-missing
+rm -f "$wc_missing"
+set +e
+"$BUILD_DIR/wc" -l "$wc_missing" "$wc_one" >/tmp/asmutils-wc.actual 2>/tmp/asmutils-wc.err
+wc_mixed_status=$?
+set -e
+[ "$wc_mixed_status" -eq 1 ] || fail 'wc mixed missing/valid operands returned wrong status'
+grep "$wc_missing" /tmp/asmutils-wc.err >/dev/null || fail 'wc diagnostic omitted missing operand'
+grep "$wc_one" /tmp/asmutils-wc.actual >/dev/null || fail 'wc did not continue after missing operand'
+assert_status 1 "$BUILD_DIR/wc" -x "$wc_one"
+assert_status 1 "$BUILD_DIR/wc" --bad "$wc_one"
+assert_status 0 "$BUILD_DIR/wc" -c -- "$wc_one"
+if [ -e /dev/full ]; then
+    assert_status 1 sh -c '"$1" -c "$2" > /dev/full' sh "$BUILD_DIR/wc" "$wc_one"
+fi
 
 tee_one=/tmp/asmutils-tee-one.output
 tee_two=/tmp/asmutils-tee-two.output
@@ -320,16 +366,81 @@ assert_stdout "$realpath_dir/sub/file" "$BUILD_DIR/realpath" "$realpath_dir/./su
 assert_stdout "$readlink_target" "$BUILD_DIR/realpath" "$readlink_link"
 assert_status 1 "$BUILD_DIR/realpath" "$realpath_dir/missing"
 
+# Mature stat: default lstat policy, -L dereference, stable byte-for-byte
+# project records, multiple operands, and GNU coreutils 9.4 field differentials.
+STAT_REFERENCE=stat
+"$STAT_REFERENCE" --version 2>/dev/null | sed -n '1p' | grep 'GNU coreutils) 9\.4$' >/dev/null \
+    || fail 'the stat differential reference must be GNU coreutils stat 9.4'
 stat_file=/tmp/asmutils-stat-file
-printf '1234567890
-' >"$stat_file"
+stat_link=/tmp/asmutils-stat-link
+printf '1234567890\n' >"$stat_file"
+chmod 0640 "$stat_file"
+rm -f "$stat_link"; ln -s "$stat_file" "$stat_link"
 stat_output=$("$BUILD_DIR/stat" "$stat_file")
-expected_stat_prefix="Size: $(stat -c %s "$stat_file")
-Mode: $(printf "%d" "0$(stat -c %a "$stat_file")")
-Inode: $(stat -c %i "$stat_file")
-Links: $(stat -c %h "$stat_file")"
-[ "$stat_output" = "$expected_stat_prefix" ] || fail 'stat did not print the expected metadata summary'
-assert_status 1 "$BUILD_DIR/stat" "$stat_file" extra
+printf '%s\n' "$stat_output" | grep "File: $stat_file" >/dev/null || fail 'stat omitted pathname'
+printf '%s\n' "$stat_output" | grep 'Type: regular' >/dev/null || fail 'stat omitted file type'
+printf '%s\n' "$stat_output" | grep 'Mode: 0640 (-rw-r-----)' >/dev/null || fail 'stat mode rendering is wrong'
+for field in Size Inode Links UID GID Device 'Special device' Access Modify Change; do
+    printf '%s\n' "$stat_output" | grep "^$field:" >/dev/null || fail "stat omitted $field"
+done
+"$BUILD_DIR/stat" --stable "$stat_file" "$stat_link" >/tmp/asmutils-stat.actual
+python3 - "$stat_file" "$stat_link" >/tmp/asmutils-stat.expected <<'PY_STAT'
+import os, stat, sys
+for path in sys.argv[1:]:
+    st = os.lstat(path)
+    mode = st.st_mode
+    if stat.S_ISREG(mode): kind = 'regular'
+    elif stat.S_ISDIR(mode): kind = 'directory'
+    elif stat.S_ISLNK(mode): kind = 'symlink'
+    elif stat.S_ISCHR(mode): kind = 'character-device'
+    elif stat.S_ISBLK(mode): kind = 'block-device'
+    elif stat.S_ISFIFO(mode): kind = 'fifo'
+    elif stat.S_ISSOCK(mode): kind = 'socket'
+    else: kind = 'unknown'
+    def stamp(ns): return f'{ns // 1_000_000_000}.{ns % 1_000_000_000:09d}'
+    values = [
+        ('path_hex', os.fsencode(path).hex()), ('type', kind),
+        ('mode', f'{mode & 0o7777:04o}'), ('perm', stat.filemode(mode)),
+        ('size', st.st_size), ('inode', st.st_ino), ('links', st.st_nlink),
+        ('uid', st.st_uid), ('gid', st.st_gid), ('dev', st.st_dev),
+        ('rdev', st.st_rdev), ('atime', stamp(st.st_atime_ns)),
+        ('mtime', stamp(st.st_mtime_ns)), ('ctime', stamp(st.st_ctime_ns)),
+    ]
+    print('\t'.join(f'{key}={value}' for key, value in values))
+PY_STAT
+cmp -s /tmp/asmutils-stat.actual /tmp/asmutils-stat.expected \
+    || fail 'stat --stable record changed byte-for-byte'
+[ "$("$BUILD_DIR/stat" --stable "$stat_link" | sed 's/.*type=\([^[:space:]]*\).*/\1/')" = symlink ] \
+    || fail 'stat default did not inspect the symlink itself'
+[ "$("$BUILD_DIR/stat" -L --stable "$stat_link" | sed 's/.*type=\([^[:space:]]*\).*/\1/')" = regular ] \
+    || fail 'stat -L did not dereference the symlink'
+[ "$("$STAT_REFERENCE" -c %s "$stat_file")" = "$("$BUILD_DIR/stat" --stable "$stat_file" | sed 's/.*\tsize=\([0-9]*\).*/\1/')" ] \
+    || fail 'stat size differs from GNU coreutils'
+stat_stable=$("$BUILD_DIR/stat" --stable "$stat_file")
+for pair in 'size:%s' 'inode:%i' 'links:%h' 'uid:%u' 'gid:%g' 'dev:%d' 'rdev:%r'; do
+    key=${pair%%:*}; format=${pair#*:}
+    expected=$("$STAT_REFERENCE" -c "$format" "$stat_file")
+    actual=$(printf '%s\n' "$stat_stable" | tr '\t' '\n' | sed -n "s/^$key=//p")
+    [ "$actual" = "$expected" ] || fail "stat $key differs from GNU coreutils"
+done
+gnu_mode=$("$STAT_REFERENCE" -c %a "$stat_file")
+stable_mode=$(printf '%s\n' "$stat_stable" | tr '\t' '\n' | sed -n 's/^mode=//p')
+[ "$stable_mode" = "0$gnu_mode" ] || fail 'stat mode differs from GNU coreutils'
+stat_missing=/tmp/asmutils-stat-missing
+rm -f "$stat_missing"
+set +e
+"$BUILD_DIR/stat" "$stat_missing" "$stat_file" >/tmp/asmutils-stat.actual 2>/tmp/asmutils-stat.err
+stat_mixed_status=$?
+set -e
+[ "$stat_mixed_status" -eq 1 ] || fail 'stat mixed operands returned wrong status'
+grep "$stat_missing" /tmp/asmutils-stat.err >/dev/null || fail 'stat diagnostic omitted failing pathname'
+grep "File: $stat_file" /tmp/asmutils-stat.actual >/dev/null || fail 'stat did not continue after failure'
+assert_status 1 "$BUILD_DIR/stat"
+assert_status 1 "$BUILD_DIR/stat" -c '%s' "$stat_file"
+assert_status 0 "$BUILD_DIR/stat" --stable -- "$stat_file"
+if [ -e /dev/full ]; then
+    assert_status 1 sh -c '"$1" "$2" > /dev/full' sh "$BUILD_DIR/stat" "$stat_file"
+fi
 
 assert_stdout "$(uname -m)" "$BUILD_DIR/arch"
 assert_stdout "$(uname -n)" "$BUILD_DIR/hostname"
@@ -493,5 +604,54 @@ case "$uname_stderr" in
     *"unsupported option: -a"*) ;;
     *) fail 'uname -a did not explain the unsupported option' ;;
 esac
+
+
+# Mature mkdir: parent walk, exact final mode despite umask, parsing, and recovery.
+mkdir_root=/tmp/asmutils-mkdir-mature
+rm -rf "$mkdir_root"
+(umask 077; "$BUILD_DIR/mkdir" -p -m 0750 "$mkdir_root/a//b/")
+[ "$(stat -c %a "$mkdir_root/a/b")" = 750 ] || fail 'mkdir -m did not override umask on final directory'
+[ "$(stat -c %a "$mkdir_root/a")" = 700 ] || fail 'mkdir -p parent did not retain ordinary umask policy'
+printf x >"$mkdir_root/not-directory"
+assert_status 1 "$BUILD_DIR/mkdir" -p "$mkdir_root/not-directory/child" "$mkdir_root/continued"
+[ -d "$mkdir_root/continued" ] || fail 'mkdir did not continue after an unrelated operand failure'
+assert_status 1 "$BUILD_DIR/mkdir" -m 888 "$mkdir_root/bad-mode"
+assert_status 0 "$BUILD_DIR/mkdir" -- "$mkdir_root/-literal"
+mkdir "$mkdir_root/existing"
+chmod 755 "$mkdir_root/existing"
+assert_status 0 "$BUILD_DIR/mkdir" -p -m 0000 "$mkdir_root/existing"
+[ "$(stat -c %a "$mkdir_root/existing")" = 755 ] \
+    || fail 'mkdir -p -m changed an already-existing final directory'
+(
+    umask 777
+    "$BUILD_DIR/mkdir" -p "$mkdir_root/restrict/a/b"
+)
+[ -d "$mkdir_root/restrict/a/b" ] \
+    || fail 'mkdir -p could not traverse a parent created under umask 777'
+
+# Mature ln: symbolic, force, directory destination, clusters, and same-file guard.
+ln_root=/tmp/asmutils-ln-mature
+rm -rf "$ln_root"; mkdir "$ln_root" "$ln_root/dest"
+printf first >"$ln_root/one"; printf second >"$ln_root/two"
+assert_status 0 "$BUILD_DIR/ln" -s missing-target "$ln_root/dangling"
+[ "$(readlink "$ln_root/dangling")" = missing-target ] || fail 'ln -s changed symbolic target text'
+assert_status 0 "$BUILD_DIR/ln" "$ln_root/one" "$ln_root/two" "$ln_root/dest"
+cmp -s "$ln_root/one" "$ln_root/dest/one" || fail 'ln directory form did not link first source'
+cmp -s "$ln_root/two" "$ln_root/dest/two" || fail 'ln directory form did not link second source'
+printf old >"$ln_root/replaced"
+assert_status 0 "$BUILD_DIR/ln" -sf replacement "$ln_root/replaced"
+[ "$(readlink "$ln_root/replaced")" = replacement ] || fail 'ln -sf did not replace destination'
+assert_status 1 "$BUILD_DIR/ln" -f "$ln_root/one" "$ln_root/one"
+[ -f "$ln_root/one" ] || fail 'ln -f same-file guard destructively removed source'
+assert_status 0 "$BUILD_DIR/ln" -s -- -target "$ln_root/dash-link"
+printf original >"$ln_root/same-symbolic"
+assert_status 1 "$BUILD_DIR/ln" -sf \
+    "$ln_root/same-symbolic" "$ln_root/same-symbolic"
+[ "$(cat "$ln_root/same-symbolic")" = original ] \
+    || fail 'ln -sf same-file guard destructively replaced source'
+mkdir "$ln_root/trailing-dest"
+assert_status 0 "$BUILD_DIR/ln" -s "path/to/foo///" "$ln_root/trailing-dest/"
+[ "$(readlink "$ln_root/trailing-dest/foo")" = 'path/to/foo///' ] \
+    || fail 'ln directory form did not trim separators for target basename'
 
 printf 'All tests passed.\n'

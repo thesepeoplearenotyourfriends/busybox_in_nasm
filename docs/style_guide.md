@@ -88,3 +88,25 @@ Unsupported options should fail clearly. For example, a teaching `echo` can say 
 The familiar command name is the user's mental index, so the recognizable core behavior should match normal Linux expectations. Full GNU or BusyBox compatibility can be added over time.
 
 When behavior is intentionally incomplete, document that limitation in the file header and in project docs where appropriate.
+
+## Duplication decision after the `head` through `stat` maturation
+
+The completed audit compared canonical `head`, `wc`, `mkdir`, `ln`, and `stat`
+and also inspected nearby stream and pathname commands.  All five contain a
+small `write_all` loop, but the surrounding contracts differ: stream commands
+promote stdout failure into an early-stop status, filesystem commands mostly
+use the writer for best-effort diagnostics, and each source assigns different
+long-lived registers.  C-string measurement is absent where compile-time
+lengths make it clearer.  Decimal formatting occurs in `head`, `wc`, and
+`stat`, but their parser/formatter direction, buffer ownership, signed-time
+needs, and fixed-width output are not one common contract.  Bounded basename
+joining remains specific to `ln`; `mkdir` instead mutates one component buffer.
+
+**Decision: keep the duplication local.**  The repeated routines are short,
+substantially visible teaching mechanisms rather than a maintenance burden.
+An include would save lines but make a reader leave the command precisely at
+the raw `write(2)` and integer-formatting lessons.  Reconsider sharing when a
+third mature command needs the same bounded path-join contract, or when several
+more daily-use commands require an identical writer plus identical diagnostic
+and status conventions.  If that threshold is reached, add the expanded-source
+Makefile target required above at the same time as the first include.
