@@ -392,16 +392,13 @@ This file records the teaching contract for each implemented command. The source
 
 ### `mkdir`
 
-- **Difficulty level:** 01 — beginner streams, strings, and simple file I/O.
-- **Tags:** `directory-create`, `mkdir-syscall`, `mode-bits`.
-- **Implemented behavior:** accepts one or more directory operands and creates each with mode `0777`, subject to the process umask.
-- **Unsupported behavior:** options such as `-p`, `-m`, `--help`, and `--version`, parent creation, custom modes, verbose output, and errno-specific diagnostics are not implemented.
-- **Syscalls used:** `mkdir(2)`, `write(2)`, and `exit(2)`.
-- **Manual tests:**
-  - `rm -rf /tmp/asm-mkdir && ./build/mkdir /tmp/asm-mkdir && test -d /tmp/asm-mkdir`
-  - `./build/mkdir /tmp/asm-mkdir; echo $?`
-  - `./build/mkdir; echo $?`
-- **Known limitations:** this is the direct syscall subset only; it does not create missing parents and reports simple path-level failures rather than decoding errno values.
+- **Difficulty level:** 01 — pathname scanning and filesystem policy.
+- **Tags:** `directory-create`, `mkdir-syscall`, `chmod-syscall`, `octal-parse`, `parent-walk`.
+- **Implemented behavior:** `mkdir [-p] [-m MODE] [--] DIRECTORY...`; MODE is one to four octal digits. `-p` creates prefixes component by component, tolerates existing directories, rejects non-directory prefixes, and continues across operands.
+- **Mode policy:** implicit parents use `0777` before umask. With `-m`, the requested final directory is changed to the exact mode after creation, so umask does not alter the documented final result.
+- **Unsupported behavior:** symbolic modes, `-v`, long options other than `--`, and errno-name decoding. Paths of 4096 bytes or more fail rather than truncate.
+- **Syscalls used:** `mkdir(2)`, `stat(2)`, `chmod(2)`, `write(2)`, and `exit(2)`.
+- **Lesson:** `lessons/mkdir/01-direct-mkdir.asm` retains the useful first stage where one operand maps directly to one `mkdir(2)` call.
 
 ### `rmdir`
 
@@ -431,17 +428,13 @@ This file records the teaching contract for each implemented command. The source
 
 ### `ln`
 
-- **Difficulty level:** 01 — beginner streams, strings, and simple file I/O.
-- **Tags:** `hard-link`, `link-syscall`, `directory-entry`.
-- **Implemented behavior:** accepts exactly two operands, `TARGET` and `LINK_NAME`, and creates a hard link with `link(2)`.
-- **Unsupported behavior:** symbolic links (`-s`), force/interactive/no-dereference options, directory-target forms, backup behavior, long options, and errno-specific diagnostics are not implemented.
-- **Syscalls used:** `link(2)`, `write(2)`, and `exit(2)`.
-- **Manual tests:**
-  - `printf data >/tmp/asm-ln-src && ./build/ln /tmp/asm-ln-src /tmp/asm-ln-dst && cmp -s /tmp/asm-ln-src /tmp/asm-ln-dst`
-  - `./build/ln /tmp/missing-target /tmp/asm-ln-dst; echo $?`
-  - `./build/ln only-one; echo $?`
-- **Known limitations:** this first pass teaches hard links only and relies on filesystem support for hard links; cross-device links, directories, and existing destinations fail through the kernel.
-
+- **Difficulty level:** 01 — pathname construction and safe directory-entry replacement.
+- **Tags:** `hard-link`, `symbolic-link`, `link-syscall`, `symlink-syscall`, `directory-destination`.
+- **Implemented behavior:** `ln [-s] [-f] [--] TARGET LINK_NAME` and `ln [-s] [-f] [--] TARGET... DIRECTORY`; short options may be clustered. Existing final directories (including symlinks followed by `stat(2)`) receive each target basename. Symbolic targets need not exist.
+- **Force policy:** creation is tried before removal. Only `EEXIST` triggers `unlink(2)`, and hard-link replacement compares device/inode first so `ln -f a a` cannot remove its source. Independent sources continue after failure.
+- **Unsupported behavior:** `-n`, `-T`, `-i`, backups, relative symbolic-link rewriting, and GNU long options. Constructed paths of 4096 bytes or more fail explicitly.
+- **Syscalls used:** `link(2)`, `symlink(2)`, `unlink(2)`, `stat(2)`, `write(2)`, and `exit(2)`.
+- **Lesson:** `lessons/ln/01-two-operand-hard-link.asm` preserves the direct two-operand `link(2)` stage because it isolates hard-link inode semantics before replacement and pathname policy.
 
 ### `link`
 

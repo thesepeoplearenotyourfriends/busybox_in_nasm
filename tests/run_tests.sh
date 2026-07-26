@@ -494,4 +494,33 @@ case "$uname_stderr" in
     *) fail 'uname -a did not explain the unsupported option' ;;
 esac
 
+
+# Mature mkdir: parent walk, exact final mode despite umask, parsing, and recovery.
+mkdir_root=/tmp/asmutils-mkdir-mature
+rm -rf "$mkdir_root"
+(umask 077; "$BUILD_DIR/mkdir" -p -m 0750 "$mkdir_root/a//b/")
+[ "$(stat -c %a "$mkdir_root/a/b")" = 750 ] || fail 'mkdir -m did not override umask on final directory'
+[ "$(stat -c %a "$mkdir_root/a")" = 700 ] || fail 'mkdir -p parent did not retain ordinary umask policy'
+printf x >"$mkdir_root/not-directory"
+assert_status 1 "$BUILD_DIR/mkdir" -p "$mkdir_root/not-directory/child" "$mkdir_root/continued"
+[ -d "$mkdir_root/continued" ] || fail 'mkdir did not continue after an unrelated operand failure'
+assert_status 1 "$BUILD_DIR/mkdir" -m 888 "$mkdir_root/bad-mode"
+assert_status 0 "$BUILD_DIR/mkdir" -- "$mkdir_root/-literal"
+
+# Mature ln: symbolic, force, directory destination, clusters, and same-file guard.
+ln_root=/tmp/asmutils-ln-mature
+rm -rf "$ln_root"; mkdir "$ln_root" "$ln_root/dest"
+printf first >"$ln_root/one"; printf second >"$ln_root/two"
+assert_status 0 "$BUILD_DIR/ln" -s missing-target "$ln_root/dangling"
+[ "$(readlink "$ln_root/dangling")" = missing-target ] || fail 'ln -s changed symbolic target text'
+assert_status 0 "$BUILD_DIR/ln" "$ln_root/one" "$ln_root/two" "$ln_root/dest"
+cmp -s "$ln_root/one" "$ln_root/dest/one" || fail 'ln directory form did not link first source'
+cmp -s "$ln_root/two" "$ln_root/dest/two" || fail 'ln directory form did not link second source'
+printf old >"$ln_root/replaced"
+assert_status 0 "$BUILD_DIR/ln" -sf replacement "$ln_root/replaced"
+[ "$(readlink "$ln_root/replaced")" = replacement ] || fail 'ln -sf did not replace destination'
+assert_status 1 "$BUILD_DIR/ln" -f "$ln_root/one" "$ln_root/one"
+[ -f "$ln_root/one" ] || fail 'ln -f same-file guard destructively removed source'
+assert_status 0 "$BUILD_DIR/ln" -s -- -target "$ln_root/dash-link"
+
 printf 'All tests passed.\n'
