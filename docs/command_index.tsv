@@ -39,3 +39,4 @@ fsync	01	mechanism-complete	filesystem-sync,fsync-syscall,open-close
 readlink	02	mechanism-complete	symlink,readlink-syscall,stdout,path-inspection
 realpath	02	mechanism-complete	path-canonicalization,procfs,open-readlink-close
 stat	02	daily-use complete	stat-syscall,lstat-syscall,file-metadata,permissions,timestamps,stable-format,multiple-operands
+cmp	01	daily-use complete	parallel-buffering,binary-compare,stdin,byte-line-position,decimal-parse,octal-format

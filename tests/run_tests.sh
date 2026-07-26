@@ -43,7 +43,7 @@ assert_stdout() {
 
 # The command index is intentionally small metadata, but it should stay present
 # for each binary built by this first-pass Makefile.
-for tool in true false echo yes pwd arch ascii clear uname env printenv sleep usleep hostname hostid logname nproc whoami tty ttysize cat head wc tee rev basename dirname which seq touch mkdir rmdir unlink ln link sync fsync readlink realpath stat; do
+for tool in true false echo yes pwd arch ascii clear uname env printenv sleep usleep hostname hostid logname nproc whoami tty ttysize cat head wc tee rev basename dirname which seq touch mkdir rmdir unlink ln link sync fsync readlink realpath stat cmp; do
     awk -F '\t' -v tool="$tool" 'NR > 1 && $1 == tool { found = 1 } END { exit found ? 0 : 1 }' "$ROOT_DIR/docs/command_index.tsv" \
         || fail "docs/command_index.tsv is missing $tool"
 done
@@ -653,5 +653,128 @@ mkdir "$ln_root/trailing-dest"
 assert_status 0 "$BUILD_DIR/ln" -s "path/to/foo///" "$ln_root/trailing-dest/"
 [ "$(readlink "$ln_root/trailing-dest/foo")" = 'path/to/foo///' ] \
     || fail 'ln directory form did not trim separators for target basename'
+
+# cmp is compared with GNU diffutils 3.10 for its deliberately supported
+# decimal-number surface. Numeric suffixes are a documented exclusion rather
+# than an accidental compatibility claim. C locale locks diagnostic wording.
+LC_ALL=C
+export LC_ALL
+CMP_REFERENCE=cmp
+"$CMP_REFERENCE" --version 2>/dev/null | sed -n '1p' | grep 'GNU diffutils) 3\.10$' >/dev/null \
+    || fail 'the cmp differential reference must be GNU diffutils cmp 3.10'
+cmp_equal=/tmp/asmutils-cmp-equal
+cmp_left=/tmp/asmutils-cmp-left
+cmp_right=/tmp/asmutils-cmp-right
+cmp_large_left=/tmp/asmutils-cmp-large-left
+cmp_large_right=/tmp/asmutils-cmp-large-right
+printf 'same\000binary\ncontent' >"$cmp_equal"
+printf 'one\ntwo\000three\nshort' >"$cmp_left"
+printf 'one\ntwX\000three\nshorter' >"$cmp_right"
+
+assert_status 0 "$BUILD_DIR/cmp" "$cmp_equal" "$cmp_equal"
+printf 'stdin compares with itself' | "$BUILD_DIR/cmp" - \
+    || fail 'cmp - should compare default stdin with itself'
+printf 'stdin compares with itself' | "$BUILD_DIR/cmp" - - \
+    || fail 'cmp - - should recognize the same stdin stream'
+assert_status 2 "$BUILD_DIR/cmp" -ls "$cmp_left" "$cmp_right"
+grep 'options -l and -s are incompatible' /tmp/asmutils-test.err >/dev/null \
+    || fail 'cmp -ls did not diagnose incompatible output modes'
+for options in '' '-l' '-s' '-n 7'; do
+    set +e
+    # Word splitting here is intentional: each value is either empty or a
+    # simple option/count pair, with no pathname content.
+    "$BUILD_DIR/cmp" $options "$cmp_left" "$cmp_right" \
+        >/tmp/asmutils-cmp.actual 2>/tmp/asmutils-cmp.actual.err
+    cmp_status=$?
+    "$CMP_REFERENCE" $options "$cmp_left" "$cmp_right" \
+        >/tmp/asmutils-cmp.reference 2>/tmp/asmutils-cmp.reference.err
+    reference_status=$?
+    set -e
+    [ "$cmp_status" -eq "$reference_status" ] \
+        || fail "cmp $options status differs from GNU diffutils"
+    if [ "$options" = -l ]; then
+        sed 's/^ *//' /tmp/asmutils-cmp.reference >/tmp/asmutils-cmp.reference.normalized
+        cmp -s /tmp/asmutils-cmp.actual /tmp/asmutils-cmp.reference.normalized \
+            || fail 'cmp -l values differ from GNU diffutils after position-padding normalization'
+    else
+        cmp -s /tmp/asmutils-cmp.actual /tmp/asmutils-cmp.reference \
+            || fail "cmp $options stdout differs from GNU diffutils"
+    fi
+    cmp -s /tmp/asmutils-cmp.actual.err /tmp/asmutils-cmp.reference.err \
+        || fail "cmp $options stderr differs from GNU diffutils"
+done
+
+# Cross several independent refill boundaries and place differences on both
+# sides of a boundary.  This detects implementations that assume equal reads.
+awk 'BEGIN { for (i = 0; i < 10000; i++) printf "%c", 65 + (i % 23) }' \
+    >"$cmp_large_left"
+cp "$cmp_large_left" "$cmp_large_right"
+printf Z | dd of="$cmp_large_right" bs=1 seek=4095 conv=notrunc 2>/dev/null
+printf Y | dd of="$cmp_large_right" bs=1 seek=8192 conv=notrunc 2>/dev/null
+set +e
+"$BUILD_DIR/cmp" -l "$cmp_large_left" "$cmp_large_right" >/tmp/asmutils-cmp.actual
+cmp_status=$?
+"$CMP_REFERENCE" -l "$cmp_large_left" "$cmp_large_right" >/tmp/asmutils-cmp.reference
+reference_status=$?
+set -e
+[ "$cmp_status" -eq 1 ] && [ "$reference_status" -eq 1 ] \
+    || fail 'cmp large differing files returned the wrong status'
+sed 's/^ *//' /tmp/asmutils-cmp.reference >/tmp/asmutils-cmp.reference.normalized
+cmp -s /tmp/asmutils-cmp.actual /tmp/asmutils-cmp.reference.normalized \
+    || fail 'cmp parallel-buffer boundary output differs from GNU diffutils'
+
+set +e
+printf 'prefix-data' | "$BUILD_DIR/cmp" "$cmp_equal" - 5 7 \
+    >/tmp/asmutils-cmp.actual 2>/tmp/asmutils-cmp.actual.err
+cmp_stdin_status=$?
+printf 'prefix-data' | "$CMP_REFERENCE" "$cmp_equal" - 5 7 \
+    >/tmp/asmutils-cmp.reference 2>/tmp/asmutils-cmp.reference.err
+reference_status=$?
+set -e
+[ "$cmp_stdin_status" -eq "$reference_status" ] \
+    || fail 'cmp stdin/skip status differs from GNU diffutils'
+cmp -s /tmp/asmutils-cmp.actual /tmp/asmutils-cmp.reference \
+    || fail 'cmp stdin/skip stdout differs from GNU diffutils'
+
+# A prefix pair reaches unequal EOF without any earlier differing byte.  Cover
+# every output mode and a limit that extends beyond the shorter input so this
+# fundamental outcome cannot hide behind first-difference coverage.
+cmp_prefix=/tmp/asmutils-cmp-prefix
+cmp_extended=/tmp/asmutils-cmp-extended
+printf 'one\ntwo\n' >"$cmp_prefix"
+printf 'one\ntwo\nthree\n' >"$cmp_extended"
+for options in '' '-l' '-s' '-n 12'; do
+    set +e
+    "$BUILD_DIR/cmp" $options "$cmp_prefix" "$cmp_extended" \
+        >/tmp/asmutils-cmp.actual 2>/tmp/asmutils-cmp.actual.err
+    cmp_status=$?
+    "$CMP_REFERENCE" $options "$cmp_prefix" "$cmp_extended" \
+        >/tmp/asmutils-cmp.reference 2>/tmp/asmutils-cmp.reference.err
+    reference_status=$?
+    set -e
+    [ "$cmp_status" -eq "$reference_status" ] \
+        || fail "cmp $options unequal-EOF status differs from GNU diffutils"
+    cmp -s /tmp/asmutils-cmp.actual /tmp/asmutils-cmp.reference \
+        || fail "cmp $options unequal-EOF stdout differs from GNU diffutils"
+    cmp -s /tmp/asmutils-cmp.actual.err /tmp/asmutils-cmp.reference.err \
+        || fail "cmp $options unequal-EOF stderr differs from GNU diffutils"
+done
+
+for invalid in '' -1 1k 18446744073709551616; do
+    assert_status 2 "$BUILD_DIR/cmp" -n "$invalid" "$cmp_equal" "$cmp_equal"
+done
+assert_status 2 "$BUILD_DIR/cmp" /tmp/asmutils-cmp-missing "$cmp_equal"
+assert_status 2 "$BUILD_DIR/cmp" -s /tmp/asmutils-cmp-missing "$cmp_equal"
+[ ! -s /tmp/asmutils-test.err ] || fail 'cmp -s printed an open diagnostic'
+assert_status 0 "$BUILD_DIR/cmp" - -
+if [ -e /dev/full ]; then
+    set +e
+    "$BUILD_DIR/cmp" "$cmp_left" "$cmp_right" >/dev/full 2>/tmp/asmutils-cmp-full.err
+    cmp_full_status=$?
+    set -e
+    [ "$cmp_full_status" -eq 2 ] || fail 'cmp succeeded after stdout failed'
+    grep 'write failed' /tmp/asmutils-cmp-full.err >/dev/null \
+        || fail 'cmp did not diagnose failed stdout'
+fi
 
 printf 'All tests passed.\n'
