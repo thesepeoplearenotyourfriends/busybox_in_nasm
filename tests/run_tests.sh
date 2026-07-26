@@ -506,6 +506,17 @@ assert_status 1 "$BUILD_DIR/mkdir" -p "$mkdir_root/not-directory/child" "$mkdir_
 [ -d "$mkdir_root/continued" ] || fail 'mkdir did not continue after an unrelated operand failure'
 assert_status 1 "$BUILD_DIR/mkdir" -m 888 "$mkdir_root/bad-mode"
 assert_status 0 "$BUILD_DIR/mkdir" -- "$mkdir_root/-literal"
+mkdir "$mkdir_root/existing"
+chmod 755 "$mkdir_root/existing"
+assert_status 0 "$BUILD_DIR/mkdir" -p -m 0000 "$mkdir_root/existing"
+[ "$(stat -c %a "$mkdir_root/existing")" = 755 ] \
+    || fail 'mkdir -p -m changed an already-existing final directory'
+(
+    umask 777
+    "$BUILD_DIR/mkdir" -p "$mkdir_root/restrict/a/b"
+)
+[ -d "$mkdir_root/restrict/a/b" ] \
+    || fail 'mkdir -p could not traverse a parent created under umask 777'
 
 # Mature ln: symbolic, force, directory destination, clusters, and same-file guard.
 ln_root=/tmp/asmutils-ln-mature
@@ -522,5 +533,14 @@ assert_status 0 "$BUILD_DIR/ln" -sf replacement "$ln_root/replaced"
 assert_status 1 "$BUILD_DIR/ln" -f "$ln_root/one" "$ln_root/one"
 [ -f "$ln_root/one" ] || fail 'ln -f same-file guard destructively removed source'
 assert_status 0 "$BUILD_DIR/ln" -s -- -target "$ln_root/dash-link"
+printf original >"$ln_root/same-symbolic"
+assert_status 1 "$BUILD_DIR/ln" -sf \
+    "$ln_root/same-symbolic" "$ln_root/same-symbolic"
+[ "$(cat "$ln_root/same-symbolic")" = original ] \
+    || fail 'ln -sf same-file guard destructively replaced source'
+mkdir "$ln_root/trailing-dest"
+assert_status 0 "$BUILD_DIR/ln" -s "path/to/foo///" "$ln_root/trailing-dest/"
+[ "$(readlink "$ln_root/trailing-dest/foo")" = 'path/to/foo///' ] \
+    || fail 'ln directory form did not trim separators for target basename'
 
 printf 'All tests passed.\n'

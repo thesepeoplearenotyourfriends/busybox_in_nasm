@@ -395,7 +395,7 @@ This file records the teaching contract for each implemented command. The source
 - **Difficulty level:** 01 — pathname scanning and filesystem policy.
 - **Tags:** `directory-create`, `mkdir-syscall`, `chmod-syscall`, `octal-parse`, `parent-walk`.
 - **Implemented behavior:** `mkdir [-p] [-m MODE] [--] DIRECTORY...`; MODE is one to four octal digits. `-p` creates prefixes component by component, tolerates existing directories, rejects non-directory prefixes, and continues across operands.
-- **Mode policy:** implicit parents use `0777` before umask. With `-m`, the requested final directory is changed to the exact mode after creation, so umask does not alter the documented final result.
+- **Mode policy:** implicit parents use `0777` before umask while temporarily preserving owner write/search (`u+wx`), so even a restrictive umask cannot strand the parent walk. With `-m`, a newly created final directory is changed to the exact mode after creation, so umask does not alter the documented final result. Under `-p`, an already-existing final directory is accepted without changing its permissions.
 - **Unsupported behavior:** symbolic modes, `-v`, long options other than `--`, and errno-name decoding. Paths of 4096 bytes or more fail rather than truncate.
 - **Syscalls used:** `mkdir(2)`, `stat(2)`, `chmod(2)`, `write(2)`, and `exit(2)`.
 - **Lesson:** `lessons/mkdir/01-direct-mkdir.asm` retains the useful first stage where one operand maps directly to one `mkdir(2)` call.
@@ -431,7 +431,7 @@ This file records the teaching contract for each implemented command. The source
 - **Difficulty level:** 01 — pathname construction and safe directory-entry replacement.
 - **Tags:** `hard-link`, `symbolic-link`, `link-syscall`, `symlink-syscall`, `directory-destination`.
 - **Implemented behavior:** `ln [-s] [-f] [--] TARGET LINK_NAME` and `ln [-s] [-f] [--] TARGET... DIRECTORY`; short options may be clustered. Existing final directories (including symlinks followed by `stat(2)`) receive each target basename. Symbolic targets need not exist.
-- **Force policy:** creation is tried before removal. Only `EEXIST` triggers `unlink(2)`, and hard-link replacement compares device/inode first so `ln -f a a` cannot remove its source. Independent sources continue after failure.
+- **Force policy:** creation is tried before removal. Only `EEXIST` triggers `unlink(2)`, and both hard- and symbolic-link replacement compare device/inode first so neither `ln -f a a` nor `ln -sf a a` can remove its source. Independent sources continue after failure. Trailing separators are removed only while deriving a directory-form basename; the symbolic-link target text itself is preserved byte-for-byte.
 - **Unsupported behavior:** `-n`, `-T`, `-i`, backups, relative symbolic-link rewriting, and GNU long options. Constructed paths of 4096 bytes or more fail explicitly.
 - **Syscalls used:** `link(2)`, `symlink(2)`, `unlink(2)`, `stat(2)`, `write(2)`, and `exit(2)`.
 - **Lesson:** `lessons/ln/01-two-operand-hard-link.asm` preserves the direct two-operand `link(2)` stage because it isolates hard-link inode semantics before replacement and pathname policy.

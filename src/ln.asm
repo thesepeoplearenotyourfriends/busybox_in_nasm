@@ -27,7 +27,7 @@ usage: db 'ln: expected TARGET LINK_NAME or TARGET... DIRECTORY',10,0
 badopt: db 'ln: unsupported option: ',0
 faila: db 'ln: cannot link ',0
 arrow: db ' -> ',0
-same: db 'ln: refusing to force a hard link onto its source: ',0
+same: db 'ln: refusing to force a link onto its source: ',0
 nl: db 10
 section .bss
 st_dest: resb 144
@@ -135,27 +135,34 @@ _start:
  jne .failed_pair
  test bh,bh
  jz .failed_pair
- test bl,bl
- jnz .remove
- ; For hard links compare device+inode before unlinking: this prevents `ln -f a a`.
+ mov rdi,r8
+ mov rsi,r9
+ call strings_equal
+ test rax,rax
+ jnz .same_file
+ ; Compare device+inode before unlinking in both hard and symbolic modes.  In
+ ; particular, `ln -sf a a` must not replace file a with a self-referential
+ ; symlink.  A missing symbolic target is valid, so a failed target stat simply
+ ; means there is no same-file identity to prove and replacement may continue.
  mov eax,SYS_STAT
  mov rdi,r8
  lea rsi,[st_src]
  syscall
  test rax,rax
- js .failed_pair
+ js .remove
  mov eax,SYS_STAT
  mov rdi,r9
  lea rsi,[st_dest]
  syscall
  test rax,rax
- js .failed_pair
+ js .remove
  mov rax,[st_src+ST_DEV]
  cmp rax,[st_dest+ST_DEV]
  jne .remove
  mov rax,[st_src+ST_INO]
  cmp rax,[st_dest+ST_INO]
  jne .remove
+.same_file:
  mov rsi,same
  call errstr
  mov rsi,r8
@@ -206,6 +213,27 @@ make_link:
  mov rsi,r9
  syscall
  ret
+; strings_equal
+;   Input: rdi, rsi = two NUL-terminated path strings.
+;   Output: rax = 1 when every byte matches, otherwise 0.
+;   Clobbers: rax, rdi, rsi.  This direct check protects even a dangling
+;   symbolic source/destination pair, for which stat(2) cannot provide inodes.
+strings_equal:
+.compare:
+ mov al,[rdi]
+ cmp al,[rsi]
+ jne .different
+ test al,al
+ jz .equal
+ inc rdi
+ inc rsi
+ jmp .compare
+.equal:
+ mov eax,1
+ ret
+.different:
+ xor eax,eax
+ ret
 ; join_basename: rdi=directory, rsi=target. Output path[], rax=0 or 1 on overflow.
 join_basename:
  lea rdx,[path]
@@ -230,26 +258,47 @@ join_basename:
  mov byte [rdx+rcx],'/'
  inc rcx
 .base_find:
+ ; Find the NUL, then move left over trailing separators.  Searching backward
+ ; from that trimmed end makes `path/to/foo///` contribute basename `foo`
+ ; instead of the empty string after the final slash.
  mov rax,rsi
- mov r10,rsi
 .find_end:
- mov dil,[rax]
- test dil,dil
- jz .copy_base
- cmp dil,'/'
- jne .fe_next
- lea r10,[rax+1]
-.fe_next: inc rax
+ cmp byte [rax],0
+ je .trim_target
+ inc rax
  jmp .find_end
-.copy_base:                 ; Basename is text after the last slash.
+.trim_target:
+ cmp rax,rsi
+ je .overflow               ; an empty target has no usable basename.
+ cmp byte [rax-1],'/'; trailing separators are not part of the basename.
+ jne .find_component
+ dec rax
+ jmp .trim_target
+.find_component:
+ mov r11,rax                ; r11 = one byte past trimmed basename.
+.scan_back:
+ cmp rax,rsi
+ je .copy_base
+ cmp byte [rax-1],'/'; basename starts immediately after this separator.
+ je .copy_base
+ dec rax
+ jmp .scan_back
+.copy_base:
+ mov r10,rax
+.copy_loop:                 ; Copy only through the trimmed component end.
+ cmp r10,r11
+ je .terminate
  mov al,[r10]
  cmp rcx,PATH_MAX-1
  jae .overflow
  mov [rdx+rcx],al
  inc r10
  inc rcx
- test al,al
- jnz .copy_base
+ jmp .copy_loop
+.terminate:
+ cmp rcx,PATH_MAX
+ jae .overflow
+ mov byte [rdx+rcx],0
  xor eax,eax
  ret
 .overflow: mov eax,1

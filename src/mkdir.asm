@@ -1,7 +1,10 @@
 ; mkdir.asm - small field-usable directory creator.
 ; Surface: mkdir [-p] [-m MODE] [--] DIRECTORY... . MODE is exactly 1-4 octal
 ; digits (0000..7777). The final directory is chmod(2)'d after creation so -m is
-; exact despite umask. Parents made by -p use 0777 before umask, like GNU mkdir.
+; exact despite umask, but only for a final directory this invocation creates.
+; Under -p, existing directories keep their modes.  Parents use 0777 before
+; umask while preserving owner write/search so a restrictive mask cannot strand
+; the component walk.
 ; Paths are copied to a 4096-byte buffer and overflow fails explicitly.
 ; Syscalls: mkdir, chmod, stat, write, exit. Every operand is attempted.
 bits 64
@@ -10,6 +13,7 @@ global _start
 %define SYS_WRITE 1
 %define SYS_STAT 4
 %define SYS_CHMOD 90
+%define SYS_UMASK 95
 %define SYS_MKDIR 83
 %define SYS_EXIT 60
 %define EINTR 4
@@ -135,10 +139,13 @@ _start:
 ; Copies one byte at a time. At each slash it temporarily inserts NUL, creates
 ; the prefix, verifies EEXIST is a directory, then restores the slash.
 mkdir_parents:
- push r12
- push r13
- mov r12,rdi               ; r12 = source path; r13 = copied length.
- xor r13d,r13d
+    push r12
+    push r13
+    push r14
+    push r15
+    mov r12,rdi               ; r12 = source path; r13 = copied length.
+    xor r13d,r13d
+    xor r14d,r14d             ; r14 = 1 while the parent-specific umask is active.
 .copy:
  cmp r13,PATH_MAX-1
  jae .mp_fail
@@ -149,14 +156,41 @@ mkdir_parents:
  jnz .copy
  ; Skip repeated separators and dot components naturally: empty prefixes and
  ; prefixes ending '/.' are not sent to mkdir.
- lea rcx,[path]
- mov rdx,rcx
+    lea rcx,[path]
+    mov rdx,rcx
+
+    ; GNU mkdir's intermediate-parent policy is `=rwx,u+wx`: the caller's
+    ; umask filters ordinary bits, but may not remove owner write/search and
+    ; strand mkdir inside a parent it just created.  umask(2) returns the old
+    ; mask, so temporarily clear those two mask bits while walking parents.
+    mov eax,SYS_UMASK          ; umask(2): rdi = temporary mask 0; returns old mask.
+    xor edi,edi
+    syscall
+    mov r15,rax               ; r15 = caller's umask until it is restored.
+    mov rdi,rax
+    and edi,~0300o
+    mov eax,SYS_UMASK          ; umask(2): rdi = parent-creation mask.
+    syscall
+    mov r14d,1
+    mov rcx,rdx                ; syscall clobbers rcx; restart the path scan.
 .scan:
  mov al,[rcx]
  test al,al
  jz .final
  cmp al,'/'
  jne .advance
+ ; A run of separators at the end belongs to the final operand, not to the
+ ; parent list.  Otherwise `new/` would be created as a parent and mistaken for
+ ; an already-existing final directory, incorrectly skipping explicit chmod.
+ mov rax,rcx
+.look_past_slashes:
+ cmp byte [rax],'/'; find the first byte after this separator run.
+ jne .after_slashes
+ inc rax
+ jmp .look_past_slashes
+.after_slashes:
+ cmp byte [rax],0
+ je .final
  cmp rcx,rdx
  je .advance
  cmp byte [rcx-1],'/'
@@ -181,6 +215,12 @@ mkdir_parents:
 .advance: inc rcx
  jmp .scan
 .final:
+    ; The requested final directory uses the caller's original umask.  An
+    ; explicit -m is made exact later, but only when this invocation creates it.
+    mov eax,SYS_UMASK          ; umask(2): rdi = saved caller mask.
+    mov rdi,r15
+    syscall
+    xor r14d,r14d
  ; Remove trailing slashes for a stable final syscall, except root '/'.
  lea rcx,[path+r13-2]
 .trim: cmp rcx,rdx
@@ -193,11 +233,14 @@ mkdir_parents:
 .create_final:
  mov rdi,rdx
  mov esi,ebp
- call ensure_dir
- test rax,rax
- js .mp_fail
- test bh,bh
- jz .mp_ok
+    call ensure_dir
+    test rax,rax
+    js .mp_fail
+    mov r15,rax               ; 0 = created, 1 = already-existing directory.
+    test bh,bh
+    jz .mp_ok
+    test r15,r15
+    jnz .mp_ok                ; -p never changes an existing directory's mode.
  mov eax,SYS_CHMOD          ; chmod final only; implicit parents retain umask mode.
  mov rdi,rdx
  mov esi,ebp
@@ -206,11 +249,24 @@ mkdir_parents:
  js .mp_fail
 .mp_ok: xor eax,eax
  jmp .mp_ret
-.mp_fail: mov rax,-1
-.mp_ret: pop r13
+.mp_fail:
+    test r14d,r14d
+    jz .mp_failed_after_restore
+    mov eax,SYS_UMASK          ; umask(2): restore even when a parent fails.
+    mov rdi,r15
+    syscall
+.mp_failed_after_restore:
+    mov rax,-1
+.mp_ret:
+    pop r15
+    pop r14
+    pop r13
  pop r12
  ret
-; ensure_dir: rdi=path, esi=create mode. EEXIST succeeds only for a directory.
+; ensure_dir: rdi=path, esi=create mode.
+; Output: rax=0 if created, 1 if an existing directory was found, negative on
+; failure.  Distinguishing the first two states prevents `mkdir -p -m` from
+; chmodding a directory that belongs to the caller already.
 ensure_dir:
  push rdi
  mov eax,SYS_MKDIR
@@ -230,8 +286,12 @@ ensure_dir:
  and eax,S_IFMT
  cmp eax,S_IFDIR
  jne .ed_bad
+ jmp .ed_existing
 .ed_ok: xor eax,eax
- jmp .ed_ret
+    jmp .ed_ret
+.ed_existing:
+    mov eax,1
+    jmp .ed_ret
 .ed_bad: mov rax,-1
 .ed_ret: pop rdi
  ret

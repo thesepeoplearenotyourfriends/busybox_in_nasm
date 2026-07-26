@@ -89,9 +89,9 @@ The familiar command name is the user's mental index, so the recognizable core b
 
 When behavior is intentionally incomplete, document that limitation in the file header and in project docs where appropriate.
 
-## Duplication audit after the filesystem maturation batch
+## Interim duplication decision during filesystem maturation
 
-A review of `head`, `wc`, `mkdir`, `ln`, and `stat` found repeated `write_all`,
+A preliminary review of `head`, `wc`, `mkdir`, `ln`, and `stat` found repeated `write_all`,
 C-string measurement, diagnostics, and number-formatting routines. They remain
 local for now. The I/O loops are small, while their error contracts and register
 ownership still differ; pathname joining and basename selection are command
@@ -99,4 +99,7 @@ policy rather than generic machinery. An include becomes worthwhile when a
 third mature pathname command needs the same bounded join contract, or when
 three mature commands use the same writer calling convention and error result.
 Until then, keeping each syscall path visible is more educational than saving a
-few repeated lines.
+few repeated lines. This decision must be revisited after the canonical `wc`
+and `stat` implementations complete their planned maturation; they currently
+provide evidence about existing duplication, not the final mature contracts
+required by the batch-wide audit.
