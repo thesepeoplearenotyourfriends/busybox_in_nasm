@@ -127,6 +127,7 @@ differential suite.  No compatibility profile has yet been selected.
 | `readlink` | 02 | source exists | `mechanism-complete` | prints the raw target of exactly one symbolic link; it does not canonicalize paths or support options |
 | `realpath` | 02 | source exists | `mechanism-complete` | resolves one existing pathname through `/proc/self/fd`; procfs is required and missing-path modes are not supported |
 | `stat` | 02 | source exists | `daily-use complete` | readable multi-path metadata, default link inspection, `-L`, and stable `--stable` records |
+| `cmp` | 01 | source exists | `daily-use complete` | buffered binary comparison with `-l`, `-s`, `-n`, decimal skips, and stdin support |
 
 Difficulty and topic metadata are tracked in `docs/command_index.tsv`; per-command teaching contracts are tracked in `docs/commands.md`. Source files stay flat under `src/` so commands remain easy to find by name.
 
@@ -146,6 +147,7 @@ The goal is approachable, not simplified-to-death: useful margin notes for someo
 - `ld` from GNU binutils or a compatible linker
 - POSIX-ish shell for tests
 - GNU coreutils 9.4 for the **differential test suite only**
+- GNU diffutils 3.10 for the `cmp` **differential test suite only**
 - Python 3 for constructing byte-exact expected `stat --stable` records in tests
 
 ## Build
@@ -197,6 +199,7 @@ build/fsync
 build/readlink
 build/realpath
 build/stat
+build/cmp
 ```
 
 ## Test

@@ -514,6 +514,18 @@ This file records the teaching contract for each implemented command. The source
 - **Reference:** stable numeric metadata and symbolic-link policy are differentially checked against GNU coreutils 9.4; `--stable` itself is tested byte-for-byte as a project interface. No complete GNU compatibility profile is claimed.
 - **Lesson:** `lessons/stat/01-compact-struct-summary.asm` retains the first-stage four-field struct-offset lesson before type, permission, timestamp, and format policy are introduced.
 
+### `cmp`
+
+- **Difficulty level:** 01 — buffered binary stream comparison.
+- **Tags:** `parallel-buffering`, `binary-compare`, `stdin`, `byte-line-position`, `decimal-parse`, `octal-format`.
+- **Implemented behavior:** `cmp [-l] [-s] [-n LIMIT] [--] FILE1 [FILE2 [SKIP1 [SKIP2]]]`. `FILE2` defaults to stdin and one input may be `-`. Default output reports the first unequal one-based byte and line; `-l` reports every unequal byte with unpadded one-based decimal positions and three-column octal values; `-s` suppresses difference and error output; `-n` compares at most `LIMIT` bytes after the skips. Short `-l` and `-s` options may be clustered.
+- **Numeric policy:** `LIMIT`, `SKIP1`, and `SKIP2` are full unsigned decimal values through `UINT64_MAX`. Empty, signed, suffixed, non-decimal, and overflowing values fail with status `2`. Skips consume the stream instead of seeking, so they also work on pipes.
+- **Stream and buffer policy:** each input owns an independent 4096-byte buffer and cursor. The comparison never assumes that parallel reads return equal-sized chunks, handles binary NUL bytes, retries interrupted reads, and has no input-size truncation boundary. Two explicit `-` operands are rejected because one pipe cannot provide two independently positioned logical streams.
+- **Exit status:** `0` means the selected ranges are equal, `1` means they differ (including unequal-length EOF), and `2` means invocation or I/O trouble. Open/read/close diagnostics name the operand; writes retry `EINTR`, complete partial writes, and make a broken stdout status `2`.
+- **Unsupported behavior:** GNU/BusyBox numeric suffixes, `--ignore-initial`, `--bytes`, `--print-bytes`, `--help`, and `--version` are not implemented. Decimal operands are an intentional smaller and unambiguous interface.
+- **Syscalls used:** `open(2)`, `read(2)`, `write(2)`, `close(2)`, and `exit(2)`.
+- **Reference:** the supported output, option, stdin, skip, and status surface is differentially tested against GNU diffutils 3.10. GNU's size-derived leading padding on `-l` byte positions is normalized because this streaming implementation intentionally prints unpadded positions. Numeric-suffix behavior and two explicit stdin operands are outside that comparison surface.
+
 ## Roadmap direction
 
 Implementation order is tracked in `docs/roadmap.md`.

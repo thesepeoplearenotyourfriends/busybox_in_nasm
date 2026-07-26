@@ -166,9 +166,9 @@ The first vertical-maturation sequence is complete:
 
 These targets are derived from the implemented subsets and limitations recorded in `docs/commands.md`; that file remains descriptive and must not acquire a competing priority list.
 
-The next implementation should be `cmp`, because parallel buffered reads, the
-first differing byte/line, and unequal-length EOF handling are mechanisms not
-yet taught together. `ls` should follow when directory enumeration and
+`cmp` is now implemented with parallel buffered reads, first-difference byte and
+line tracking, unequal-length EOF handling, bounded comparisons, stream skips,
+and GNU diffutils 3.10 differential tests. `ls` should follow when directory enumeration and
 presentation—not merely another pathname syscall—become the intended teaching
 focus. Broader work such as `grep`, `find`, `ps`, networking, compression,
 shells, package tools, init tools, and filesystem repair remains later work
