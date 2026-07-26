@@ -1,8 +1,8 @@
 # Roadmap
 
-This project grows by adding familiar Linux utilities in educational difficulty order. BusyBox is useful as a source catalog for command names, but implementation here should remain original and teaching-focused.
+This project grows by adding familiar Linux utilities in an educational order. BusyBox is useful as a source catalog for command names, but implementation here should remain original and teaching-focused.
 
-Do **not** choose commands alphabetically. Pick from the lowest unfinished level unless a task explicitly says otherwise.
+Do **not** choose commands alphabetically or treat the lowest unfinished level as a queue to exhaust. Add a new command only when it introduces a distinct mechanism that the existing sources do not already teach. The levels below remain useful topic and difficulty metadata, but they are not command-count targets and do not determine implementation order.
 
 ## Source layout and metadata
 
@@ -38,7 +38,7 @@ arch, ascii, clear, echo, env, false, hostid, hostname, logname, nproc,
 printenv, pwd, sleep, true, tty, ttysize, uname, usleep, whoami, yes
 ```
 
-Current diagnostic order:
+Current implemented inventory, cross-checked against `docs/command_index.tsv`, `Makefile`'s `TOOLS`, and `src/*.asm`:
 
 ```text
 true -> false -> echo -> yes -> pwd -> arch -> ascii -> clear -> uname -> env -> printenv -> sleep -> usleep -> hostname -> hostid -> logname -> nproc -> whoami -> tty -> ttysize -> cat -> head -> wc -> tee -> rev -> basename -> dirname -> which -> seq -> touch -> mkdir -> rmdir -> unlink -> ln -> link -> sync -> fsync -> readlink -> realpath -> stat
@@ -58,7 +58,7 @@ tr, unexpand, uniq, unix2dos, unlink, wc, which
 
 First Level 01 progress: `cat`, `head`, `wc`, `tee`, `rev`, `basename`, `dirname`, `which`, `seq`, `touch`, `mkdir`, `rmdir`, `unlink`, `ln`, `link`, `sync`, and `fsync` are implemented. Level 02 filesystem inspection has started with `readlink`, `realpath`, and `stat`.
 
-Good remaining early targets after `pwd` and `cat`:
+Possible later commands in this topic, subject to the distinct-mechanism policy:
 
 ```text
 cut, cmp, unix2dos, dos2unix
@@ -152,15 +152,21 @@ Purpose: parsers, interpreters, REPLs, terminal UI, line editing, regular expres
 
 Examples include `ash`, `awk`, `bc`, `dc`, `ed`, `hexedit`, `hush`, `mim`, `sed`, `sh`, and `vi`. Do not begin here. For `mim`, first confirm the exact BusyBox command semantics for the target BusyBox version before implementation.
 
-## Suggested implementation batches
+## Next implementation sequence
 
-1. **Absolute basics:** `true`, `false`, `echo`, `yes`, `pwd`.
-2. **First file and stream tools:** `cat`, `head`, `wc`, `tee`, `rev`.
-3. **Path/string tools:** `basename`, `dirname`, `which`, `seq`, then `cut`.
-4. **Tiny filesystem mutation:** `touch` is implemented; continue with `mkdir`, `rmdir`, `unlink`, and `ln`.
-5. **First real filesystem inspection:** `readlink`, `realpath`, and `stat` are implemented; continue with `ls` and `du`.
+The near-term work is maturation rather than accumulating command names. Follow this order:
 
-Only after these batches should the project move toward `grep`, `find`, `ps`, networking, compression, shells, package tools, init tools, or filesystem repair tools.
+1. **Reconcile the repository.** Cross-check every claimed command and maturity value in `docs/command_index.tsv` against `Makefile`'s `TOOLS`, the actual `src/*.asm` files, and the descriptive contracts in `docs/commands.md`. Resolve discrepancies before using the inventory to plan work. In particular, do not interpret a source file or a roadmap entry as evidence of daily-use completeness.
+2. **Mature `head`.** Grow beyond its current default-only, single-file subset. The target is count selection (beginning with `-n`, then a clearly documented byte-count form), multiple file operands with appropriate headers and quiet/verbose control, correct handling of a final unterminated line, and robust read/write/error behavior. Keep the buffered stopping logic explicit enough to teach why bytes after the requested boundary are not emitted.
+3. **Mature `wc`.** Add `-l`, `-w`, `-c`, `-m`, and `-L` selection with well-defined combinations; support `-` as stdin among file operands; retain correct per-input totals; and make output columns and failures consistent and documented. Character counting must introduce an explicit encoding policy rather than silently calling bytes characters, while maximum-line-length handling must cover a final unterminated line.
+4. **Mature selected filesystem commands.** Prefer depth in `mkdir`, `ln`, and `stat` before adding another shallow filesystem wrapper:
+   - `mkdir`: add readable mode parsing for `-m` and component-by-component parent creation for `-p`, including the existing-directory and partial-failure cases.
+   - `ln`: add symbolic links with `-s`, then teach destination replacement and directory-target forms with explicit `-f`/dereference policy; preserve the simple hard-link path as the introductory case.
+   - `stat`: expand the teaching summary to cover file type, permissions, ownership, device information, and timestamps; add a documented symbolic-link dereference choice and a small, deliberate format-selection interface rather than attempting GNU formatting all at once.
+
+These targets are derived from the implemented subsets and limitations recorded in `docs/commands.md`; that file remains descriptive and must not acquire a competing priority list.
+
+After this sequence, `cmp` is a suitable breadth addition because parallel buffered reads, the first differing byte/line, and unequal-length EOF handling are mechanisms not yet taught together. `ls` should follow when directory enumeration and presentation—not merely another pathname syscall—become the intended teaching focus. Broader work such as `grep`, `find`, `ps`, networking, compression, shells, package tools, init tools, and filesystem repair remains later work unless it is selected to teach a clearly missing mechanism.
 
 ## Worklog rule
 
