@@ -31,50 +31,102 @@ Educational clarity is more important than cleverness, size, or speed.
 
 Level 00 is complete — time for cake and confetti! 🎂🎊
 
+## Maturity model
+
+Having a source file means that a command's teaching mechanism exists; it does
+not by itself mean that the command is ready for routine shell use or compatible
+with another implementation.  The project uses these cumulative maturity
+states:
+
+- **`mechanism-complete`** — the source builds and demonstrates its stated
+  low-level mechanism, its implemented behavior and important limitations are
+  documented, and focused smoke tests cover that teaching contract.  It may
+  still omit ordinary command behavior or robust I/O edge cases.
+- **`daily-use complete`** — in addition to being mechanism-complete, the
+  command satisfies **all applicable** daily-use criteria below.  This is an
+  objective engineering gate, not a judgment that the source merely feels
+  useful.
+- **`compatibility-complete`** — in addition to being daily-use complete, the
+  project deliberately names a compatibility profile (for example, a specific
+  BusyBox release or GNU coreutils release), documents the profile's supported
+  surface and intentional deviations, and tests the command against that named
+  reference.  Similar-looking output or a command name borrowed from a roadmap
+  is not a compatibility claim.
+
+### Daily-use completion criteria
+
+A daily-use command must have tests and documented behavior covering:
+
+1. ordinary invocation and ordinary operand behavior;
+2. common options for the deliberately supported command surface;
+3. conventional stdin behavior and `-` as stdin wherever the command class
+   conventionally accepts input streams;
+4. correct success and failure exit statuses, including mixed-operand failures;
+5. retrying interrupted (`EINTR`) operations and correctly completing partial
+   reads/writes where the relevant syscall permits them;
+6. detection and explicit failure for fixed-buffer truncation rather than
+   silently returning incomplete data;
+7. binary-safe data handling where the utility operates on byte streams;
+8. useful diagnostics that identify the command, operation or operand that
+   failed; and
+9. differential tests against a **named reference implementation and version**
+   for the behavior claimed by the daily-use surface.  Passing these tests does
+   not create a compatibility profile; that requires the additional deliberate
+   scope and deviation record described above.
+
+An item may be marked not applicable only when the command's documented
+contract explains why (for example, `true` has no input stream).  The current
+audit inspected the actual `src/*.asm` implementations and the contracts in
+`docs/commands.md`, rather than inferring maturity from the roadmap.  No command
+currently meets every applicable daily-use criterion—most notably, there is no
+versioned named-reference differential suite and several implementations do not
+retry `EINTR`—so every current command remains `mechanism-complete`.  No
+compatibility profile has yet been selected.
+
 ## Current utilities
 
-| Utility | Level | Status | Notes |
-| --- | ---: | --- | --- |
-| `true` | 00 | ✅ | exits with status 0 |
-| `false` | 00 | ✅ | exits with status 1 |
-| `echo` | 00 | ✅ | [🔗](docs/notes/echo.md) supports plain operands and `-n`; unsupported option handling is intentionally explicit |
-| `yes` | 00 | ✅ | writes `y` repeatedly, or the provided operands joined by spaces |
-| `pwd` | 00 | ✅ | prints the kernel current working directory with `getcwd(2)` |
-| `arch` | 00 | ✅ | prints the machine hardware name from `uname(2)` |
-| `ascii` | 00 | ✅ | [🔗](docs/notes/ascii.md) prints a compact 7-bit ASCII reference table |
-| `clear` | 00 | ✅ | [🔗](docs/notes/clear.md) writes an ANSI/VT100 clear-screen sequence |
-| `uname` | 00 | ✅ | prints the kernel name by default; supports `-m` |
-| `env` | 00 | ✅ | [🔗](docs/notes/env.md) prints the current environment; editing and command execution are not implemented |
-| `printenv` | 00 | ✅ | [🔗](docs/notes/printenv.md) prints all environment entries or selected variable values |
-| `sleep` | 00 | ✅ | sleeps for one unsigned decimal seconds operand |
-| `usleep` | 00 | ✅ | [🔗](docs/notes/usleep.md) sleeps for one unsigned decimal microseconds operand |
-| `hostname` | 00 | ✅ | prints the kernel node name from `uname(2)` |
-| `hostid` | 00 | ✅ | prints an eight-hex-digit FNV-1a teaching identifier from the kernel node name |
-| `logname` | 00 | ✅ | prints the non-empty `LOGNAME` environment value in this envp-focused first pass |
-| `nproc` | 00 | ✅ | counts CPUs allowed by the current process affinity mask |
-| `whoami` | 00 | ✅ | prints the effective user name by scanning `/etc/passwd` for `geteuid(2)` |
-| `tty` | 00 | ✅ | checks stdin with `ioctl(TCGETS)` and prints its terminal path; supports silent `-s` |
-| `ttysize` | 00 | ✅ | [🔗](docs/notes/ttysize.md) prints terminal rows and columns from `ioctl(TIOCGWINSZ)` on stdin |
-| `cat` | 01 | ✅ | [🔗](docs/notes/cat.md) copies stdin or named files to stdout with a fixed buffer and write-all loop |
-| `head` | 01 | ✅ | prints the first 10 lines from stdin or one named file |
-| `wc` | 01 | ✅ | [🔗](docs/notes/wc.md) prints default line, word, and byte counts for stdin or one or more files |
-| `tee` | 01 | ✅ | copies stdin to stdout and to one or more files; supports simple `-a` append mode |
-| `rev` | 01 | ✅ | reverses each input line using a documented 4096-byte line buffer limit |
-| `basename` | 01 | ✅ | strips directory prefixes and trailing slashes from one pathname operand |
-| `dirname` | 01 | ✅ | prints the directory component of one pathname operand |
-| `which` | 01 | ✅ | searches `PATH` for executable command names, or checks paths that contain `/` |
-| `seq` | 01 | ✅ | prints increasing unsigned decimal sequences for 1-, 2-, or 3-operand forms |
-| `touch` | 01 | ✅ | updates file timestamps with `utimensat(2)` and creates missing files with `open(2)` |
-| `mkdir` | 01 | ✅ | creates one or more directories with mode `0777` before umask filtering |
-| `rmdir` | 01 | ✅ | removes one or more empty directories |
-| `unlink` | 01 | ✅ | removes one pathname with `unlink(2)` |
-| `ln` | 01 | ✅ | creates a two-operand hard link with `link(2)` |
-| `link` | 01 | ✅ | accepts exactly `FILE LINK_NAME` and creates a hard link with `link(2)`; no options or symbolic links |
-| `sync` | 01 | ✅ | accepts no operands and calls global `sync(2)`; per-file modes and options are not implemented |
-| `fsync` | 01 | ✅ | opens exactly one pathname read-only, calls `fsync(2)`, and closes it; diagnostics are intentionally brief |
-| `readlink` | 02 | ✅ | prints the raw target of exactly one symbolic link; it does not canonicalize paths or support options |
-| `realpath` | 02 | ✅ | resolves one existing pathname through `/proc/self/fd`; procfs is required and missing-path modes are not supported |
-| `stat` | 02 | ✅ | prints size, decimal mode bits, inode, and link count for one pathname; output is not GNU/BusyBox compatible |
+| Utility | Level | Source | Maturity | Notes |
+| --- | ---: | --- | --- | --- |
+| `true` | 00 | source exists | `mechanism-complete` | exits with status 0 |
+| `false` | 00 | source exists | `mechanism-complete` | exits with status 1 |
+| `echo` | 00 | source exists | `mechanism-complete` | [🔗](docs/notes/echo.md) supports plain operands and `-n`; unsupported option handling is intentionally explicit |
+| `yes` | 00 | source exists | `mechanism-complete` | writes `y` repeatedly, or the provided operands joined by spaces |
+| `pwd` | 00 | source exists | `mechanism-complete` | prints the kernel current working directory with `getcwd(2)` |
+| `arch` | 00 | source exists | `mechanism-complete` | prints the machine hardware name from `uname(2)` |
+| `ascii` | 00 | source exists | `mechanism-complete` | [🔗](docs/notes/ascii.md) prints a compact 7-bit ASCII reference table |
+| `clear` | 00 | source exists | `mechanism-complete` | [🔗](docs/notes/clear.md) writes an ANSI/VT100 clear-screen sequence |
+| `uname` | 00 | source exists | `mechanism-complete` | prints the kernel name by default; supports `-m` |
+| `env` | 00 | source exists | `mechanism-complete` | [🔗](docs/notes/env.md) prints the current environment; editing and command execution are not implemented |
+| `printenv` | 00 | source exists | `mechanism-complete` | [🔗](docs/notes/printenv.md) prints all environment entries or selected variable values |
+| `sleep` | 00 | source exists | `mechanism-complete` | sleeps for one unsigned decimal seconds operand |
+| `usleep` | 00 | source exists | `mechanism-complete` | [🔗](docs/notes/usleep.md) sleeps for one unsigned decimal microseconds operand |
+| `hostname` | 00 | source exists | `mechanism-complete` | prints the kernel node name from `uname(2)` |
+| `hostid` | 00 | source exists | `mechanism-complete` | prints an eight-hex-digit FNV-1a teaching identifier from the kernel node name |
+| `logname` | 00 | source exists | `mechanism-complete` | prints the non-empty `LOGNAME` environment value in this envp-focused first pass |
+| `nproc` | 00 | source exists | `mechanism-complete` | counts CPUs allowed by the current process affinity mask |
+| `whoami` | 00 | source exists | `mechanism-complete` | prints the effective user name by scanning `/etc/passwd` for `geteuid(2)` |
+| `tty` | 00 | source exists | `mechanism-complete` | checks stdin with `ioctl(TCGETS)` and prints its terminal path; supports silent `-s` |
+| `ttysize` | 00 | source exists | `mechanism-complete` | [🔗](docs/notes/ttysize.md) prints terminal rows and columns from `ioctl(TIOCGWINSZ)` on stdin |
+| `cat` | 01 | source exists | `mechanism-complete` | [🔗](docs/notes/cat.md) copies stdin or named files to stdout with a fixed buffer and write-all loop |
+| `head` | 01 | source exists | `mechanism-complete` | prints the first 10 lines from stdin or one named file |
+| `wc` | 01 | source exists | `mechanism-complete` | [🔗](docs/notes/wc.md) prints default line, word, and byte counts for stdin or one or more files |
+| `tee` | 01 | source exists | `mechanism-complete` | copies stdin to stdout and to one or more files; supports simple `-a` append mode |
+| `rev` | 01 | source exists | `mechanism-complete` | reverses each input line using a documented 4096-byte line buffer limit |
+| `basename` | 01 | source exists | `mechanism-complete` | strips directory prefixes and trailing slashes from one pathname operand |
+| `dirname` | 01 | source exists | `mechanism-complete` | prints the directory component of one pathname operand |
+| `which` | 01 | source exists | `mechanism-complete` | searches `PATH` for executable command names, or checks paths that contain `/` |
+| `seq` | 01 | source exists | `mechanism-complete` | prints increasing unsigned decimal sequences for 1-, 2-, or 3-operand forms |
+| `touch` | 01 | source exists | `mechanism-complete` | updates file timestamps with `utimensat(2)` and creates missing files with `open(2)` |
+| `mkdir` | 01 | source exists | `mechanism-complete` | creates one or more directories with mode `0777` before umask filtering |
+| `rmdir` | 01 | source exists | `mechanism-complete` | removes one or more empty directories |
+| `unlink` | 01 | source exists | `mechanism-complete` | removes one pathname with `unlink(2)` |
+| `ln` | 01 | source exists | `mechanism-complete` | creates a two-operand hard link with `link(2)` |
+| `link` | 01 | source exists | `mechanism-complete` | accepts exactly `FILE LINK_NAME` and creates a hard link with `link(2)`; no options or symbolic links |
+| `sync` | 01 | source exists | `mechanism-complete` | accepts no operands and calls global `sync(2)`; per-file modes and options are not implemented |
+| `fsync` | 01 | source exists | `mechanism-complete` | opens exactly one pathname read-only, calls `fsync(2)`, and closes it; diagnostics are intentionally brief |
+| `readlink` | 02 | source exists | `mechanism-complete` | prints the raw target of exactly one symbolic link; it does not canonicalize paths or support options |
+| `realpath` | 02 | source exists | `mechanism-complete` | resolves one existing pathname through `/proc/self/fd`; procfs is required and missing-path modes are not supported |
+| `stat` | 02 | source exists | `mechanism-complete` | prints size, decimal mode bits, inode, and link count for one pathname; output is not GNU/BusyBox compatible |
 
 Difficulty and topic metadata are tracked in `docs/command_index.tsv`; per-command teaching contracts are tracked in `docs/commands.md`. Source files stay flat under `src/` so commands remain easy to find by name.
 
