@@ -37,7 +37,7 @@ Level 00 is complete — time for cake and confetti! 🎂🎊
 | --- | ---: | --- | --- |
 | `true` | 00 | ✅ | exits with status 0 |
 | `false` | 00 | ✅ | exits with status 1 |
-| `echo` | 00 | ✅ | [🔗](docs/notes/echo,md) supports plain operands and `-n`; unsupported option handling is intentionally explicit |
+| `echo` | 00 | ✅ | [🔗](docs/notes/echo.md) supports plain operands and `-n`; unsupported option handling is intentionally explicit |
 | `yes` | 00 | ✅ | writes `y` repeatedly, or the provided operands joined by spaces |
 | `pwd` | 00 | ✅ | prints the kernel current working directory with `getcwd(2)` |
 | `arch` | 00 | ✅ | prints the machine hardware name from `uname(2)` |
@@ -69,6 +69,12 @@ Level 00 is complete — time for cake and confetti! 🎂🎊
 | `rmdir` | 01 | ✅ | removes one or more empty directories |
 | `unlink` | 01 | ✅ | removes one pathname with `unlink(2)` |
 | `ln` | 01 | ✅ | creates a two-operand hard link with `link(2)` |
+| `link` | 01 | ✅ | accepts exactly `FILE LINK_NAME` and creates a hard link with `link(2)`; no options or symbolic links |
+| `sync` | 01 | ✅ | accepts no operands and calls global `sync(2)`; per-file modes and options are not implemented |
+| `fsync` | 01 | ✅ | opens exactly one pathname read-only, calls `fsync(2)`, and closes it; diagnostics are intentionally brief |
+| `readlink` | 02 | ✅ | prints the raw target of exactly one symbolic link; it does not canonicalize paths or support options |
+| `realpath` | 02 | ✅ | resolves one existing pathname through `/proc/self/fd`; procfs is required and missing-path modes are not supported |
+| `stat` | 02 | ✅ | prints size, decimal mode bits, inode, and link count for one pathname; output is not GNU/BusyBox compatible |
 
 Difficulty and topic metadata are tracked in `docs/command_index.tsv`; per-command teaching contracts are tracked in `docs/commands.md`. Source files stay flat under `src/` so commands remain easy to find by name.
 
@@ -131,6 +137,12 @@ build/mkdir
 build/rmdir
 build/unlink
 build/ln
+build/link
+build/sync
+build/fsync
+build/readlink
+build/realpath
+build/stat
 ```
 
 ## Test
@@ -201,6 +213,14 @@ printf data >/tmp/asmutils-unlink-example
 printf data >/tmp/asmutils-ln-source
 rm -f /tmp/asmutils-ln-link
 ./build/ln /tmp/asmutils-ln-source /tmp/asmutils-ln-link
+rm -f /tmp/asmutils-link-copy
+./build/link /tmp/asmutils-ln-source /tmp/asmutils-link-copy
+./build/sync
+./build/fsync /tmp/asmutils-ln-source
+ln -sf /tmp/asmutils-ln-source /tmp/asmutils-readlink
+./build/readlink /tmp/asmutils-readlink
+./build/realpath ./src/../src/true.asm
+./build/stat /tmp/asmutils-ln-source
 ```
 
 ## Project philosophy
