@@ -6,7 +6,7 @@
 ; umask while preserving owner write/search so a restrictive mask cannot strand
 ; the component walk.
 ; Paths are copied to a 4096-byte buffer and overflow fails explicitly.
-; Syscalls: mkdir, chmod, stat, write, exit. Every operand is attempted.
+; Syscalls: mkdir, chmod, stat, umask, write, exit. Every operand is attempted.
 bits 64
 default rel
 global _start
