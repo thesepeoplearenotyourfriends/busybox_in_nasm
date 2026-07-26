@@ -29,10 +29,10 @@ dirname	01	mechanism-complete	path,string-scan
 which	01	mechanism-complete	path-search,envp,access-syscall,string-scan
 seq	01	mechanism-complete	stdout,argv,decimal-parse,decimal-format,simple-loop
 touch	01	mechanism-complete	file-create,timestamp,utimensat-syscall,open-close
-mkdir	01	mechanism-complete	directory-create,mkdir-syscall,mode-bits
+mkdir	01	mechanism-complete	directory-create,mkdir-syscall,chmod-syscall,umask-syscall,mode-bits,octal-parse,parent-walk
 rmdir	01	mechanism-complete	directory-remove,rmdir-syscall
 unlink	01	mechanism-complete	file-remove,unlink-syscall,directory-entry
-ln	01	mechanism-complete	hard-link,link-syscall,directory-entry
+ln	01	mechanism-complete	hard-link,symbolic-link,link-syscall,symlink-syscall,directory-entry,directory-destination
 link	01	mechanism-complete	hard-link,link-syscall,directory-entry
 sync	01	mechanism-complete	filesystem-sync,sync-syscall,no-args
 fsync	01	mechanism-complete	filesystem-sync,fsync-syscall,open-close

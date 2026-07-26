@@ -117,10 +117,10 @@ compatibility profile has yet been selected.
 | `which` | 01 | source exists | `mechanism-complete` | searches `PATH` for executable command names, or checks paths that contain `/` |
 | `seq` | 01 | source exists | `mechanism-complete` | prints increasing unsigned decimal sequences for 1-, 2-, or 3-operand forms |
 | `touch` | 01 | source exists | `mechanism-complete` | updates file timestamps with `utimensat(2)` and creates missing files with `open(2)` |
-| `mkdir` | 01 | source exists | `mechanism-complete` | creates one or more directories with mode `0777` before umask filtering |
+| `mkdir` | 01 | source exists | `mechanism-complete` | supports `-p`, exact octal `-m`, `--`, and aggregate multi-operand failure |
 | `rmdir` | 01 | source exists | `mechanism-complete` | removes one or more empty directories |
 | `unlink` | 01 | source exists | `mechanism-complete` | removes one pathname with `unlink(2)` |
-| `ln` | 01 | source exists | `mechanism-complete` | creates a two-operand hard link with `link(2)` |
+| `ln` | 01 | source exists | `mechanism-complete` | supports hard/symbolic links, `-f`, `--`, and destination-directory forms |
 | `link` | 01 | source exists | `mechanism-complete` | accepts exactly `FILE LINK_NAME` and creates a hard link with `link(2)`; no options or symbolic links |
 | `sync` | 01 | source exists | `mechanism-complete` | accepts no operands and calls global `sync(2)`; per-file modes and options are not implemented |
 | `fsync` | 01 | source exists | `mechanism-complete` | opens exactly one pathname read-only, calls `fsync(2)`, and closes it; diagnostics are intentionally brief |
